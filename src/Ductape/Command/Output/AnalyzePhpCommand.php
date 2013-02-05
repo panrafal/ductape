@@ -19,10 +19,11 @@ class AnalyzePhpCommand extends OutputCommand {
                 ->setName('analyze-php')
                 ->setAliases(array('analyze'))
                 ->setDescription('Executes provided script and analyzes it\'s dependencies.')
-                ->addArgument('script', InputArgument::REQUIRED, 'Script to run')
+                ->addArgument('script', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Script to run')
                 ->addOption('globals', null, InputOption::VALUE_OPTIONAL, 'JSON encoded globals hashmap. {"_SERVER" : {"REQUEST_URI":"/"}}', false)
-                ->addOption('http', null, InputOption::VALUE_OPTIONAL, 'Full URL to set in the environment, faking a HTTP REQUEST', false)
-                ->addArgument('filter', InputArgument::REQUIRED, 'Filter files in Chequer Query Language.')
+                ->addOption('fake-http', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 
+                        'Sets server variables to fake http requests. Pass URLs or {url : globals} hashmaps.', array())
+                ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter files in Chequer Query Language.')
 
                 ;
         
@@ -44,44 +45,65 @@ class AnalyzePhpCommand extends OutputCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $files = $this->readInputData($input, 'files');
-        $classes = $this->readInputData($input, 'classes');
+        $files = $this->readInputData($input, $output, 'files');
+        $classesIn = $this->readInputData($input, $output, 'classes');
+        $classesOut = array();
+        $classmap = array();
         
         $pa = new \Ductape\Analyzer\ProcessAnalyzer();
         
-        $env = array();
+        $globals = $this->getInputValue('globals', $input)->getArray();
         
-        if ($input->getOption('http')) $env = $pa->fakeHttpGlobals($input->getOption('http'));
+        $fakeHttp = $this->getInputValue('fake-http', $input)->getArray();
         
         $globals = $input->getOption('globals');
         if ($globals) $env = array_merge($env, json_decode($globals));
 
-        $filesFilter = $this->getInputValue('filter', $input)->getArray();
+        $filesFilter = $this->getInputValue('filter', $input, \Ductape\Command\CommandValue::TYPE_JSON)->getArray();
 //        $classFilter = $this->getInputValue('class-filter', $input)->getArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            if ($filesFilter) $output->writeln("Filtering files with " . json_encode($filesFilter));
-//            if ($classFilter) $output->writeln("Filtering classes with " . json_encode($classFilter));
+            if ($filesFilter !== null) $output->writeln("filtering files with " . json_encode($filesFilter));
+//            if ($classFilter) $output->writeln("filtering classes with " . json_encode($classFilter));
         }
         
+        if (!$fakeHttp) $fakeHttp = array(true);
+        if (!is_array($globals)) $globals = array();
+        
+        $scripts = $this->getInputValue('script', $input)->getArray();
 
         
-        $result = $pa->analyzeFile($input->getArgument('script'), $env, $classes);
-        
-        if (!$result) {
-            $output->writeln("Script failed!");
-            exit(1);
-        }
+        foreach($scripts as $script) {
+            foreach($fakeHttp as $url => $urlGlobals) {
+                $env = array();
+                if ($url !== 0 || $urlGlobals !== true) {
+                    if (is_numeric($url)) {
+                        $url = $urlGlobals;
+                        $urlGlobals = array();
+                    }
+                    $env = array_merge($pa->fakeHttpGlobals($url), $globals, $urlGlobals);
+                }
+                if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+                    $output->writeln(sprintf("\nrunning script <comment>%s</comment> with globals %s", $script, json_encode($env, JSON_UNESCAPED_SLASHES)));
+                }
 
-        if ($filesFilter) $result['files'] = array_filter($result['files'], new \Chequer($filesFilter));
-        
-        $files = array_unique(array_merge($files, $result['files']));
-        $classes = array_unique(array_merge($files, array_keys($result['classes'])));
-        $classmap = array_merge($files, $result['classes']);
+                $result = $pa->analyzeFile($script, $env, $classesIn);
 
+                if (!$result) {
+                    $output->writeln("Script failed!");
+                    exit(1);
+                }
+
+                if ($filesFilter !== null) $result['files'] = array_filter($result['files'], new \Chequer($filesFilter));
+
+                $files = array_unique(array_merge($files, $result['files']));
+                $classesOut = array_unique(array_merge($classesOut, array_keys($result['classes'])));
+                $classmap = array_merge($classmap, $result['classes']);
+            }
+        }        
 
         $this->writeOutputData($files, $input, $output, 'files');
-        $this->writeOutputData($classes, $input, $output, 'classes');
+        $this->writeOutputData($classesOut, $input, $output, 'classes');
         $this->writeOutputData($classmap, $input, $output, 'classmap');
         
     }

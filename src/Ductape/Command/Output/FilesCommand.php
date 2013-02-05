@@ -38,7 +38,7 @@ class FilesCommand extends OutputCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $files = $this->readInputData($input, 'files');
+        $files = $this->readInputData($input, $output, 'files');
 
         $filter = $this->getInputValue('filter', $input)->getArray();
         

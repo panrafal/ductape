@@ -19,9 +19,14 @@ class CommandValue {
     const TYPE_FILE = 'file';
     const TYPE_SET = 'set';
 
-    
-    function __construct( $command, $value, $defaultType = self::TYPE_STRING ) {
-        if (is_array($value)) {
+    /**
+     * @param $command
+     * @param $value Value to parse
+     * @param $defaultType - Default type to assume for strings - string, file, set or json
+     * @param $allowArray - TRUE to enable recursive parsing of arrays (not hashmaps!)
+     */
+    function __construct( $command, $value, $defaultType = self::TYPE_STRING, $allowArray = false ) {
+        if ($allowArray && is_array($value)) {
             if (!count($value)) $value = null;
             elseif (count($value) == 1) $value = $value[0];
         }
@@ -30,7 +35,7 @@ class CommandValue {
         $this->command = $command;
         $this->value = $value;
         
-        $this->parse();
+        $this->parse($allowArray);
     }
 
     
@@ -81,6 +86,8 @@ class CommandValue {
             $value = 'php://stdout';
         } elseif (strtolower($value) === 'stderr') {
             $value = 'php://stderr';
+        } elseif ($value === "-" || $value === "/dev/null") {
+            return null;
         }
         
         return $value;
@@ -116,7 +123,7 @@ class CommandValue {
             
             $result = '';
             foreach ($this->value as $value) {
-                $value = new CommandValue($this->command, $value, $this->defaultType);
+                $value = new CommandValue($this->command, $value, $this->defaultType, false);
                 $result .= $value->getString();
             }
             return $result;
@@ -124,6 +131,7 @@ class CommandValue {
         } elseif ($this->type === self::TYPE_STRING || $this->type === self::TYPE_JSON) {
             return $this->value;
         } elseif ($this->type === self::TYPE_OBJECT) {
+            if (is_array($this->value)) return implode("\n", $this->value);
             return (string)$this->value;
         } elseif ($this->type === self::TYPE_FILE) {
             return $this->getFileContents();
@@ -175,14 +183,14 @@ class CommandValue {
     }
     
     
-    protected function parse() {
+    protected function parse($allowArray) {
         $value = $this->value;
         if (is_string($this->value)) $this->identifier = $this->value;
         
         $this->type = $this->defaultType;
         
         if (is_array($value)) {
-            $this->type = isset($value[0]) ? self::TYPE_ARRAY : self::TYPE_OBJECT;
+            $this->type = isset($value[0]) && $allowArray ? self::TYPE_ARRAY : self::TYPE_OBJECT;
             return;
         }
         
@@ -207,6 +215,22 @@ class CommandValue {
             
             $this->type = self::TYPE_JSON;
             
+        }
+    }
+
+
+    public function getShortDescription() {
+        switch ($this->getType()) {
+            case CommandValue::TYPE_ARRAY:
+                return '[Array]';
+            case CommandValue::TYPE_STRING:
+                return '"' . substr($this->value, 0, 32) . '"';
+            case CommandValue::TYPE_JSON:
+                return '{JSON}';
+            case CommandValue::TYPE_OBJECT:
+                return '{Object}';
+            default:
+                return substr($this->getRaw(), 0, 32);
         }
     }
     

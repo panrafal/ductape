@@ -38,7 +38,7 @@ class ProcessAnalyzerInjection {
         if ( !empty($this->options['loadClasses']) ) {
             foreach($this->options['loadClasses'] as $class) {
                 if (!class_exists($class)) {
-                    throw new \Exception("Additional class {$class} does not exist!");
+                    throw new \Exception("Additional class '{$class}' does not exist!");
                 }
             }
         }

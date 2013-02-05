@@ -2,10 +2,10 @@
 
 namespace Ductape\Console;
 
+use Ductape\Command\InputOutput\FilterCommand;
 use Ductape\Command\InputOutput\RunCommand;
 use Ductape\Command\Output\AnalyzePhpCommand;
 use Ductape\Command\Output\FilesCommand;
-use Ductape\Command\Output\FilterCommand;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -18,9 +18,10 @@ class Construction extends Application {
     protected $data = array();
     
     const SET_ALL = 'all';
-    const SET_DEFAULT = 'default';
+    const SET_DATA = 'data';
     const SET_FILES = 'files';
     
+    public $lastDataSet = self::SET_DATA;
     
     /**
      * Constructor.
@@ -45,13 +46,13 @@ class Construction extends Application {
     }
 
 
-    public function getDataSet($set = self::SET_DEFAULT) {
+    public function getDataSet($set = self::SET_DATA) {
         if ($set === self::SET_ALL) return $this->data;
         if (isset($this->data[$set])) return $this->data[$set];
         return array();
     }
 
-    public function setDataSet($elements, $set = self::SET_DEFAULT) {
+    public function setDataSet($elements, $set = self::SET_DATA) {
         if ($set === self::SET_ALL) 
             $this->data = $elements;
         else 

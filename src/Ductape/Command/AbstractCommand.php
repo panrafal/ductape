@@ -39,6 +39,21 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         }
     }
 
+    protected function getVerboseInfo(InputInterface $input, OutputInterface $output) {
+        $s = "\n------------------------------\n";
+        $s .= "Running <comment>".$this->getName()."</comment> with options: ";
+        $params = array_merge(
+                    array_map('json_decode', array_diff_assoc( array_map('json_encode', $input->getArguments()), array_map('json_encode', $this->getDefinition()->getArgumentDefaults()) )), 
+                    array_map('json_decode', array_diff_assoc( array_map('json_encode', $input->getOptions()), array_map('json_encode', $this->getDefinition()->getOptionDefaults()) ))
+                );
+        unset($params[0]);
+        unset($params['command']);
+        $s .= json_encode($params, /*JSON_PRETTY_PRINT |*/ JSON_UNESCAPED_SLASHES);
+        $s .= "\n";
+        return $s;
+    }
+    
+    
     private function setStreamRedirection($sets, $direction, $file, InputInterface $input) {
         $sets = array_keys($sets);
         if ($sets) {
@@ -50,21 +65,36 @@ abstract class AbstractCommand extends Command implements CommandInterface {
                     return;
                 }
             }
+            var_dump($input->getOptions());
             if ($this->getInputValue($sets[0] . '-' . $direction, $input)->isEmpty()) {
                 $this->setInputValue($sets[0] . '-' . $direction, $file, $input);
             }
         }
     }
     
-    protected function getVerboseInfo(InputInterface $input, OutputInterface $output) {
-        $s = "\nRunning <comment>".$this->getName()."</comment> with options:\n";
+    private function setupDefaultDataSetsRedirection(InputInterface $input) {
+        $inSets = array_keys($this->getInputSets());
+        $outSets = array_keys($this->getOutputSets());
         
-        $s .= json_encode(array_merge(
-                    @array_diff_assoc( $input->getArguments(), $this->getDefinition()->getArgumentDefaults() ), 
-                    @array_diff_assoc( $input->getOptions(), $this->getDefinition()->getOptionDefaults() )
-                ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        $s .= "\n------------------------------\n";
-        return $s;
+        if ($inSets 
+                && $inSets[0] == Construction::SET_DATA 
+                && $this->getApplication()->lastDataSet != Construction::SET_DATA
+                && $this->getInputValue($inSets[0] . '-in', $input)->isEmpty()
+        ) {
+            $this->setInputValue($inSets[0] . '-in', '$' . $this->getApplication()->lastDataSet . '$', $input);            
+        }
+        
+        if ($outSets
+                && $outSets[0] == Construction::SET_DATA 
+                && $this->getApplication()->lastDataSet != Construction::SET_DATA
+                && $this->getInputValue($outSets[0] . '-out', $input)->isEmpty()
+        ) {
+            $this->setInputValue($outSets[0] . '-out', '$' . $this->getApplication()->lastDataSet . '$', $input);
+        }
+        
+        if ($outSets && $outSets[0] != Construction::SET_DATA) {
+            $this->getApplication()->lastDataSet = $outSets[0];
+        }
     }
     
     protected function initialize(InputInterface $input, OutputInterface $output) {
@@ -78,10 +108,13 @@ abstract class AbstractCommand extends Command implements CommandInterface {
             }
         }
 
+        /* setup stdout. always-on stdin causes trouble on windows, so for now it will be off */
         if ($input instanceof ArgvInput) {
-            $this->setStreamRedirection($this->getInputSets(), 'in', '#stdin#', $input);
+            //$this->setStreamRedirection($this->getInputSets(), 'in', '#stdin#', $input);
             $this->setStreamRedirection($this->getOutputSets(), 'out', '#stdout#', $input);
         }
+        
+        $this->setupDefaultDataSetsRedirection($input);
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
             $output->writeln($this->getVerboseInfo($input, $output));
@@ -98,14 +131,17 @@ abstract class AbstractCommand extends Command implements CommandInterface {
     /** @return CommandValue */
     public function getInputValue($name, InputInterface $input, $defaultType = CommandValue::TYPE_STRING) {
         $value = null;
+        $allowArray = false;
         if ($input->hasArgument($name)) {
             $value = $input->getArgument($name);
+            $allowArray = $this->getDefinition()->getArgument($name)->isArray();
         } elseif ($input->hasOption($name)) {
             $value = $input->getOption($name);
+            $allowArray = $this->getDefinition()->getOption($name)->isArray();
         } else {
             throw new \Exception("Value {$name} is not defined!");
         }
-        return new CommandValue($this, $value, $defaultType);
+        return new CommandValue($this, $value, $defaultType, $allowArray);
     }
     
     public function setInputValue($name, $value, InputInterface $input) {
@@ -119,49 +155,59 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         }
     }
     
-    public function readInputData(InputInterface $input, $set = Construction::SET_DEFAULT) {
+    public function readInputData(InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new \Exception('No input sets defined!');
             
-        if ($set === Construction::SET_DEFAULT) $set = $sets[0];
+        if ($set === Construction::SET_DATA) $set = $sets[0];
         
         $value = $this->getInputValue($set . '-in', $input);
         if ($value->isEmpty()) {
             // default handling
-            return $this->getApplication()->getDataSet($set);
+            $data = $this->getApplication()->getDataSet($set);
+            $readFrom = "\$$set\$";
         } else {
-            return $value->getArray();
+            $data = $value->getArray();
+            $readFrom = $value->getShortDescription();
         }
-        
+        if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('read %d %s from %s', count($data), $set, $readFrom));
+        }
+        return $data;
     }
     
-    public function writeOutputData($elements, InputInterface $input, OutputInterface $output, $set = Construction::SET_DEFAULT) {
+    public function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new \Exception('No input sets defined!');
 
-        if ($set === Construction::SET_DEFAULT) $set = $sets[0];
+        if ($set === Construction::SET_DATA) $set = $sets[0];
 
         $value = $this->getInputValue($set . '-out', $input);
         if ($value->isEmpty()) {
             // default handling
-            $this->getApplication()->setDataSet($elements, $set);
+            $this->getApplication()->setDataSet($data, $set);
+            $wroteTo = "\$$set\$";
         } else {
             if ($value->isElementsSet()) {
-                $this->getApplication()->setDataSet($elements, $value->getSetId());
+                $this->getApplication()->setDataSet($data, $value->getSetId());
             } elseif ($value->getFilePath()) {
-                if (!count($elements) || isset($elements[0])) {
-                    $elements = implode("\n", $elements);
+                if (!count($data) || isset($data[0])) {
+                    $dataString = implode("\n", $data);
                 } else {
-                    $elements = json_encode($elements, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                    $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
                 }
                 if ($value->getFilePath() === 'php://stdout') {
-                    $output->write($elements, OutputInterface::OUTPUT_RAW);
+                    $output->write($dataString, OutputInterface::OUTPUT_RAW);
                 } else {
-                    file_put_contents($value->getFilePath(), $elements);
+                    file_put_contents($value->getFilePath(), $dataString);
                 }
             }
+            $wroteTo = $value->getShortDescription();
+        }
+        if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('wrote %d %s to %s', count($data), $set, $wroteTo));
         }
         
     }
