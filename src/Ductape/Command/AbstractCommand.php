@@ -2,7 +2,7 @@
 
 namespace Ductape\Command;
 
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArgvInput;
@@ -14,30 +14,35 @@ abstract class AbstractCommand extends Command implements CommandInterface {
 
     protected $shortcircuits = array();
     
+
     protected function configure() {
         parent::configure();
         
         $inSets = $this->getInputSets();
         $outSets = $this->getOutputSets();
         
+        $options = array();
+        
         $i = 0;
         foreach($inSets as $set => $info) {
-            $this->addOption($set.'-in', $i == 0 ? 'i' : null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL
+            $options[$i.'-in'] = new InputOption($set.'-in', $i == 0 ? 'i' : null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL
                     , 'Input '.$set.'. A list of values, $SET$, {JSON} or #FILE#.');
             ++$i;
         }
         
         $i = 0;
         foreach($outSets as $set => $info) {
-            $this->addOption($set.'-out', $i == 0 ? 'o' : null, InputOption::VALUE_OPTIONAL
+            $options[$i.'-out'] = new InputOption($set.'-out', $i == 0 ? 'o' : null, InputOption::VALUE_OPTIONAL
                     , 'Output '.$set.'. A $SET$ or #FILE#.');
             if (array_key_exists($set, $inSets)) {
                 $this->shortcircuits[] = $set;
-                $this->addOption($set, null, InputOption::VALUE_OPTIONAL
+                $options[$i.'-'] = new InputOption($set, null, InputOption::VALUE_OPTIONAL
                         , "Shortcut for --{$set}-in=value --{$set}-out=value.");
             }
             ++$i;
         }
+        ksort($options);
+        $this->getDefinition()->addOptions($options);
     }
 
     protected function getVerboseInfo(InputInterface $input, OutputInterface $output) {
@@ -78,22 +83,22 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $outSets = array_keys($this->getOutputSets());
         
         if ($inSets 
-                && $inSets[0] == Construction::SET_DATA 
-                && $this->getApplication()->lastDataSet != Construction::SET_DATA
+                && $inSets[0] == Ductape::SET_DATA 
+                && $this->getApplication()->lastDataSet != Ductape::SET_DATA
                 && $this->getInputValue($inSets[0] . '-in', $input)->isEmpty()
         ) {
             $this->setInputValue($inSets[0] . '-in', '$' . $this->getApplication()->lastDataSet . '$', $input);            
         }
         
         if ($outSets
-                && $outSets[0] == Construction::SET_DATA 
-                && $this->getApplication()->lastDataSet != Construction::SET_DATA
+                && $outSets[0] == Ductape::SET_DATA 
+                && $this->getApplication()->lastDataSet != Ductape::SET_DATA
                 && $this->getInputValue($outSets[0] . '-out', $input)->isEmpty()
         ) {
             $this->setInputValue($outSets[0] . '-out', '$' . $this->getApplication()->lastDataSet . '$', $input);
         }
         
-        if ($outSets && $outSets[0] != Construction::SET_DATA) {
+        if ($outSets && $outSets[0] != Ductape::SET_DATA) {
             $this->getApplication()->lastDataSet = $outSets[0];
         }
     }
@@ -124,7 +129,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
     }
 
     
-    /** @return Construction */
+    /** @return Ductape */
     public function getApplication() {
         return parent::getApplication();
     }
@@ -156,12 +161,12 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         }
     }
     
-    public function readInputData(InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
+    public function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
             
-        if ($set === Construction::SET_DATA) $set = $sets[0];
+        if ($set === Ductape::SET_DATA) $set = $sets[0];
         
         $value = $this->getInputValue($set . '-in', $input);
         if ($value->isEmpty()) {
@@ -178,12 +183,12 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         return $data;
     }
     
-    public function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
+    public function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
 
-        if ($set === Construction::SET_DATA) $set = $sets[0];
+        if ($set === Ductape::SET_DATA) $set = $sets[0];
 
         $value = $this->getInputValue($set . '-out', $input);
         if ($value->isEmpty()) {

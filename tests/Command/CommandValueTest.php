@@ -1,18 +1,18 @@
 <?php
 
 use Ductape\Command\CommandValue;
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 
 require_once __DIR__ . '/../bootstrap.php';
 
 class CommandValueTest extends PHPUnit_Framework_TestCase {
 
-    /** @var Construction */
+    /** @var Ductape */
     protected $construction;
     protected $command;
 
 	protected function setUp() {
-        $this->construction = new Construction();
+        $this->construction = new Ductape();
         $this->command = $this->construction->find('analyze-php');
         $this->construction->setDataSet(array('element1', 'element2'));
     }

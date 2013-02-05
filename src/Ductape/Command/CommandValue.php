@@ -142,6 +142,13 @@ class CommandValue {
     
     
     public function getBool() {
+        if (is_string($this->value)) {
+            if (strcasecmp($this->value, 'false') === 0) return false;
+            if (strcasecmp($this->value, 'not') === 0) return false;
+            if (strcasecmp($this->value, 'no') === 0) return false;
+            if (strcasecmp($this->value, 'off') === 0) return false;
+            if (strcasecmp($this->value, 'null') === 0) return false;
+        }
         return $this->value == true;
     }
     

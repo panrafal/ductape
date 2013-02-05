@@ -15,19 +15,19 @@ class ProcessAnalyzerTest extends PHPUnit_Framework_TestCase {
     protected function tearDown() {
     }
 
-//    public function testAnalyzeCode() {
-//        $result = $this->pa->analyzeCode('<?php 
-//            class TestClass {
-//            }
-//            echo "hello!";
-//            ?'.'>');
-//        
-//        $this->assertNotNull($result);
-//    }
+    public function testAnalyzeCode() {
+        $result = $this->pa->analyzeCode('<?php 
+            class TestClass {
+            }
+            echo "hello!";
+            ?'.'>');
+        
+        $this->assertNotNull($result);
+    }
     
 
     public function testAnalyzeFile() {
-        $result = $this->pa->analyzeFile(__DIR__ . '/../builder.php');
+        $result = $this->pa->analyzeFile(__DIR__ . '/../../ductape.php');
         
         $this->assertNotNull($result);
     }
@@ -41,7 +41,7 @@ class ProcessAnalyzerTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('https://www.foo.com/foo/bar', $globals['_SERVER']['SCRIPT_URI']);
         $this->assertEquals('/foo/bar', $globals['_SERVER']['SCRIPT_URL']);
         $this->assertEquals('127.0.0.1', $globals['_SERVER']['REMOTE_ADDR']);
-        $this->assertEquals('Aqueduct', $globals['_SERVER']['HTTP_USER_AGENT']);
+        $this->assertEquals('Ductape', $globals['_SERVER']['HTTP_USER_AGENT']);
         $this->assertEquals('GET', $globals['_SERVER']['REQUEST_METHOD']);
         $this->assertEquals('/foo/bar?hello=world&array[]=one&array[]=two', $globals['_SERVER']['REQUEST_URI']);
         $this->assertEquals('hello=world&array[]=one&array[]=two', $globals['_SERVER']['QUERY_STRING']);

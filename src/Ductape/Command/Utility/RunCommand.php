@@ -5,7 +5,7 @@ namespace Ductape\Command\Utility;
 use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandInterface;
 use Ductape\Command\CommandValue;
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -37,7 +37,7 @@ class RunCommand extends AbstractCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $elements = $this->getApplication()->getDataSet(Construction::SET_ALL);
+        $elements = $this->getApplication()->getDataSet(Ductape::SET_ALL);
 
         $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->getArray();
         
@@ -45,9 +45,9 @@ class RunCommand extends AbstractCommand {
             $output->writeln(sprintf("Running %d commands", count($commands)));
         }
 
-        $construction = new Construction();
+        $construction = new Ductape();
         $construction->setAutoExit(false);
-        $construction->setDataSet($elements, Construction::SET_ALL);
+        $construction->setDataSet($elements, Ductape::SET_ALL);
         
         foreach($commands as $commandName => $inputArray) {
             if (is_numeric($commandName)) {

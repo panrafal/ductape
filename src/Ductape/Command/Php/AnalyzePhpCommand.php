@@ -6,7 +6,7 @@ use Chequer;
 use Ductape\Analyzer\ProcessAnalyzer;
 use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandValue;
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -17,14 +17,12 @@ class AnalyzePhpCommand extends AbstractCommand {
     protected function configure() {
         parent::configure();
 
-        $this
-                ->setName('analyze-php')
-                ->setAliases(array('analyze'))
+        $this->setName('analyze-php')
                 ->setDescription('Executes provided script and analyzes it\'s dependencies.')
                 ->addArgument('script', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'Script to run')
                 ->addOption('globals', null, InputOption::VALUE_OPTIONAL, 'JSON encoded globals hashmap. {"_SERVER" : {"REQUEST_URI":"/"}}', false)
                 ->addOption('fake-http', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 
-                        'Sets server variables to fake http requests. Pass URLs or {url : globals} hashmaps.', array())
+                        "Sets server variables to fake http requests.\nPass URLs or {url : globals} hashmaps.", array())
                 ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter files in Chequer Query Language.')
 
                 ;
@@ -33,13 +31,13 @@ class AnalyzePhpCommand extends AbstractCommand {
 
     public function getInputSets() {
         return [
-            Construction::SET_FILES => array(), 
+            Ductape::SET_FILES => array(), 
             'classes' => array()];
     }
     
     public function getOutputSets() {
         return [
-            Construction::SET_FILES => array(), 
+            Ductape::SET_FILES => array(), 
             'classes' => array(), 
             'classmap' => array()
             ];

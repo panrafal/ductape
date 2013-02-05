@@ -1,8 +1,9 @@
 <?php
 
-namespace Ductape\Console;
+namespace Ductape;
 
 use Ductape\Command\Php\AnalyzePhpCommand;
+use Ductape\Command\Php\CombinePhpCommand;
 use Ductape\Command\Utility\FilesCommand;
 use Ductape\Command\Utility\FilterCommand;
 use Ductape\Command\Utility\RunCommand;
@@ -13,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * @author Rafal Lindemann
  */
-class Construction extends Application {
+class Ductape extends Application {
 
     protected $data = array();
     
@@ -30,6 +31,7 @@ class Construction extends Application {
         parent::__construct('PHP Builder');
 
         $this->add(new AnalyzePhpCommand());
+        $this->add(new CombinePhpCommand());
         $this->add(new FilesCommand());
         $this->add(new FilterCommand());
         $this->add(new RunCommand());

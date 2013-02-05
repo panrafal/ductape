@@ -5,7 +5,7 @@ namespace Ductape\Command\Utility;
 use Chequer;
 use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandValue;
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -27,11 +27,11 @@ class FilterCommand extends AbstractCommand {
     }
 
     public function getInputSets() {
-        return [Construction::SET_DATA => array()];
+        return [Ductape::SET_DATA => array()];
     }
     
     public function getOutputSets() {
-        return [Construction::SET_DATA => array()];
+        return [Ductape::SET_DATA => array()];
     }
     
     protected function execute( InputInterface $input, OutputInterface $output ) {

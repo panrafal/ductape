@@ -4,7 +4,7 @@ namespace Ductape\Command\Utility;
 
 use Chequer;
 use Ductape\Command\AbstractCommand;
-use Ductape\Console\Construction;
+use Ductape\Ductape;
 use FilesystemIterator;
 use GlobIterator;
 use RecursiveDirectoryIterator;
@@ -34,11 +34,11 @@ class FilesCommand extends AbstractCommand {
     }
 
     public function getInputSets() {
-        return [Construction::SET_FILES => array()];
+        return [Ductape::SET_FILES => array()];
     }
     
     public function getOutputSets() {
-        return [Construction::SET_FILES => array()];
+        return [Ductape::SET_FILES => array()];
     }
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
