@@ -33,7 +33,7 @@ class FilterCommand extends OutputCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $elements = $this->getInputElements($input);
+        $elements = $this->readInputData($input);
 
         $filter = $this->getInputValue('filter', $input)->getArray();
         
@@ -43,7 +43,7 @@ class FilterCommand extends OutputCommand {
         
         if ($filter) $elements = array_filter($elements, new \Chequer($filter));
         
-        $this->storeOutputElements($elements, $input, $output);
+        $this->writeOutputData($elements, $input, $output);
         
     }
 

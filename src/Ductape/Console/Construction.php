@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class Construction extends Application {
 
-    protected $elements = array();
+    protected $data = array();
     
     const SET_ALL = 'all';
     const SET_DEFAULT = 'default';
@@ -45,17 +45,17 @@ class Construction extends Application {
     }
 
 
-    public function getElements($set = self::SET_DEFAULT) {
-        if ($set === self::SET_ALL) return $this->elements;
-        if (isset($this->elements[$set])) return $this->elements[$set];
+    public function getDataSet($set = self::SET_DEFAULT) {
+        if ($set === self::SET_ALL) return $this->data;
+        if (isset($this->data[$set])) return $this->data[$set];
         return array();
     }
 
-    public function setElements($elements, $set = self::SET_DEFAULT) {
+    public function setDataSet($elements, $set = self::SET_DEFAULT) {
         if ($set === self::SET_ALL) 
-            $this->elements = $elements;
+            $this->data = $elements;
         else 
-            $this->elements[$set] = $elements;
+            $this->data[$set] = $elements;
     }
     
    

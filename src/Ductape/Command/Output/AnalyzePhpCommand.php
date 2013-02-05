@@ -44,8 +44,8 @@ class AnalyzePhpCommand extends OutputCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $files = $this->getInputElements($input, 'files');
-        $classes = $this->getInputElements($input, 'classes');
+        $files = $this->readInputData($input, 'files');
+        $classes = $this->readInputData($input, 'classes');
         
         $pa = new \Ductape\Analyzer\ProcessAnalyzer();
         
@@ -80,9 +80,9 @@ class AnalyzePhpCommand extends OutputCommand {
         $classmap = array_merge($files, $result['classes']);
 
 
-        $this->storeOutputElements($files, $input, $output, 'files');
-        $this->storeOutputElements($classes, $input, $output, 'classes');
-        $this->storeOutputElements($classmap, $input, $output, 'classmap');
+        $this->writeOutputData($files, $input, $output, 'files');
+        $this->writeOutputData($classes, $input, $output, 'classes');
+        $this->writeOutputData($classmap, $input, $output, 'classmap');
         
     }
 

@@ -119,7 +119,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         }
     }
     
-    public function getInputElements(InputInterface $input, $set = Construction::SET_DEFAULT) {
+    public function readInputData(InputInterface $input, $set = Construction::SET_DEFAULT) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new \Exception('No input sets defined!');
@@ -129,14 +129,14 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $value = $this->getInputValue($set . '-in', $input);
         if ($value->isEmpty()) {
             // default handling
-            return $this->getApplication()->getElements($set);
+            return $this->getApplication()->getDataSet($set);
         } else {
             return $value->getArray();
         }
         
     }
     
-    public function storeOutputElements($elements, InputInterface $input, OutputInterface $output, $set = Construction::SET_DEFAULT) {
+    public function writeOutputData($elements, InputInterface $input, OutputInterface $output, $set = Construction::SET_DEFAULT) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new \Exception('No input sets defined!');
@@ -146,10 +146,10 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $value = $this->getInputValue($set . '-out', $input);
         if ($value->isEmpty()) {
             // default handling
-            $this->getApplication()->setElements($elements, $set);
+            $this->getApplication()->setDataSet($elements, $set);
         } else {
             if ($value->isElementsSet()) {
-                $this->getApplication()->setElements($elements, $value->getSetId());
+                $this->getApplication()->setDataSet($elements, $value->getSetId());
             } elseif ($value->getFilePath()) {
                 if (!count($elements) || isset($elements[0])) {
                     $elements = implode("\n", $elements);

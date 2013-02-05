@@ -37,7 +37,7 @@ class RunCommand extends InputOutputCommand {
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $elements = $this->getApplication()->getElements(Construction::SET_ALL);
+        $elements = $this->getApplication()->getDataSet(Construction::SET_ALL);
 
         $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->getArray();
         
@@ -47,7 +47,7 @@ class RunCommand extends InputOutputCommand {
 
         $construction = new Construction();
         $construction->setAutoExit(false);
-        $construction->setElements($elements, Construction::SET_ALL);
+        $construction->setDataSet($elements, Construction::SET_ALL);
         
         foreach($commands as $commandName => $inputArray) {
             if (is_numeric($commandName)) {
