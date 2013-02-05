@@ -1,10 +1,10 @@
 <?php
 
-namespace Ductape\Command\InputOutput;
+namespace Ductape\Command\Utility;
 
+use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandInterface;
 use Ductape\Command\CommandValue;
-use Ductape\Command\InputOutputCommand;
 use Ductape\Console\Construction;
 use Exception;
 use Symfony\Component\Console\Command\Command;
@@ -13,7 +13,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class RunCommand extends InputOutputCommand {
+class RunCommand extends AbstractCommand {
 
     protected function configure() {
         parent::configure();

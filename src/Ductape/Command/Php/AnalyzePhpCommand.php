@@ -1,16 +1,18 @@
 <?php
 
-namespace Ductape\Command\Output;
+namespace Ductape\Command\Php;
 
-use Ductape\Command\OutputCommand;
+use Chequer;
+use Ductape\Analyzer\ProcessAnalyzer;
+use Ductape\Command\AbstractCommand;
+use Ductape\Command\CommandValue;
 use Ductape\Console\Construction;
-use Ductape\ProcessAnalyzer;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AnalyzePhpCommand extends OutputCommand {
+class AnalyzePhpCommand extends AbstractCommand {
 
     protected function configure() {
         parent::configure();
@@ -50,7 +52,7 @@ class AnalyzePhpCommand extends OutputCommand {
         $classesOut = array();
         $classmap = array();
         
-        $pa = new \Ductape\Analyzer\ProcessAnalyzer();
+        $pa = new ProcessAnalyzer();
         
         $globals = $this->getInputValue('globals', $input)->getArray();
         
@@ -59,7 +61,7 @@ class AnalyzePhpCommand extends OutputCommand {
         $globals = $input->getOption('globals');
         if ($globals) $env = array_merge($env, json_decode($globals));
 
-        $filesFilter = $this->getInputValue('filter', $input, \Ductape\Command\CommandValue::TYPE_JSON)->getArray();
+        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->getArray();
 //        $classFilter = $this->getInputValue('class-filter', $input)->getArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
@@ -94,7 +96,7 @@ class AnalyzePhpCommand extends OutputCommand {
                     exit(1);
                 }
 
-                if ($filesFilter !== null) $result['files'] = array_filter($result['files'], new \Chequer($filesFilter));
+                if ($filesFilter !== null) $result['files'] = array_filter($result['files'], new Chequer($filesFilter));
 
                 $files = array_unique(array_merge($files, $result['files']));
                 $classesOut = array_unique(array_merge($classesOut, array_keys($result['classes'])));

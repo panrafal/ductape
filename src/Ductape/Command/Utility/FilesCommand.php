@@ -1,16 +1,21 @@
 <?php
 
-namespace Ductape\Command\Output;
+namespace Ductape\Command\Utility;
 
-use Ductape\Command\OutputCommand;
+use Chequer;
+use Ductape\Command\AbstractCommand;
 use Ductape\Console\Construction;
-use Ductape\ProcessAnalyzer;
+use FilesystemIterator;
+use GlobIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class FilesCommand extends OutputCommand {
+class FilesCommand extends AbstractCommand {
 
     protected function configure() {
         parent::configure();
@@ -46,17 +51,17 @@ class FilesCommand extends OutputCommand {
             if ($filter) $output->writeln("Filtering with " . json_encode($filter));
         }
         
-        if ($filter) $filter = new \Chequer($filter);
+        if ($filter) $filter = new Chequer($filter);
         
         $includeDirs = $this->getInputValue('include-dirs', $input)->getBool();
         $globs = $this->getInputValue('paths', $input)->getArray();
         
         foreach($globs as $glob) {
             $iterator = is_dir($glob) 
-                    ? new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($glob, \FilesystemIterator::SKIP_DOTS)) 
-                    : new \GlobIterator($glob, \FilesystemIterator::SKIP_DOTS);
+                    ? new RecursiveIteratorIterator(new RecursiveDirectoryIterator($glob, FilesystemIterator::SKIP_DOTS)) 
+                    : new GlobIterator($glob, FilesystemIterator::SKIP_DOTS);
             foreach($iterator as $path => $file) {
-                /* @var $file \SplFileInfo */
+                /* @var $file SplFileInfo */
                 if (!$includeDirs && $file->isDir()) continue;
                 if (!$filter || $filter($file)) $files[] = $path;
             }

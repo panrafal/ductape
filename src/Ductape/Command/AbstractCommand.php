@@ -3,6 +3,7 @@
 namespace Ductape\Command;
 
 use Ductape\Console\Construction;
+use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -139,7 +140,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
             $value = $input->getOption($name);
             $allowArray = $this->getDefinition()->getOption($name)->isArray();
         } else {
-            throw new \Exception("Value {$name} is not defined!");
+            throw new Exception("Value {$name} is not defined!");
         }
         return new CommandValue($this, $value, $defaultType, $allowArray);
     }
@@ -151,14 +152,14 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         } elseif ($input->hasOption($name)) {
             $value = $input->setOption($name, $value);
         } else {
-            throw new \Exception("Value {$name} is not defined!");
+            throw new Exception("Value {$name} is not defined!");
         }
     }
     
     public function readInputData(InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
         $sets = array_keys($this->getInputSets());
         
-        if (!$sets) throw new \Exception('No input sets defined!');
+        if (!$sets) throw new Exception('No input sets defined!');
             
         if ($set === Construction::SET_DATA) $set = $sets[0];
         
@@ -180,7 +181,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
     public function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Construction::SET_DATA) {
         $sets = array_keys($this->getOutputSets());
         
-        if (!$sets) throw new \Exception('No input sets defined!');
+        if (!$sets) throw new Exception('No input sets defined!');
 
         if ($set === Construction::SET_DATA) $set = $sets[0];
 
@@ -214,7 +215,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
 
     /** @return Input */
     public function createInputFromOptions($options) {
-        return InputOutput\RunCommand::guessInputFromOptions($this, $options);
+        return Utility\RunCommand::guessInputFromOptions($this, $options);
     }
 
     

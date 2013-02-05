@@ -1,17 +1,17 @@
 <?php
 
-namespace Ductape\Command\InputOutput;
+namespace Ductape\Command\Utility;
 
 use Chequer;
+use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandValue;
-use Ductape\Command\InputOutputCommand;
 use Ductape\Console\Construction;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class FilterCommand extends InputOutputCommand {
+class FilterCommand extends AbstractCommand {
 
     protected function configure() {
         parent::configure();

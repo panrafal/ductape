@@ -2,10 +2,10 @@
 
 namespace Ductape\Console;
 
-use Ductape\Command\InputOutput\FilterCommand;
-use Ductape\Command\InputOutput\RunCommand;
-use Ductape\Command\Output\AnalyzePhpCommand;
-use Ductape\Command\Output\FilesCommand;
+use Ductape\Command\Php\AnalyzePhpCommand;
+use Ductape\Command\Utility\FilesCommand;
+use Ductape\Command\Utility\FilterCommand;
+use Ductape\Command\Utility\RunCommand;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
