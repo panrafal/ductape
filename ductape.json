@@ -1,0 +1,13 @@
+[
+    {
+        "files": {
+            "filesIn": ["aa.txt", "bb.txt"],
+            "paths": "*.*"
+        }
+    },
+    {
+        "command" : "filter",
+        "filter": ["aa.txt"]
+    }
+
+]
