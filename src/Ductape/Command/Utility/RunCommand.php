@@ -3,14 +3,11 @@
 namespace Ductape\Command\Utility;
 
 use Ductape\Command\AbstractCommand;
-use Ductape\Command\CommandInterface;
 use Ductape\Command\CommandValue;
 use Ductape\Ductape;
-use Exception;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class RunCommand extends AbstractCommand {
@@ -22,6 +19,7 @@ class RunCommand extends AbstractCommand {
                 ->setName('run')
                 ->setDescription('Runs ductape setup')
                 ->addArgument('commands', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, '', array('ductape.json'))
+                ->addOption('return-data', 'return', InputOption::VALUE_OPTIONAL, 'Which dataset to return. Defaults to last dataset used.')
 //                ->addArgument('filter', InputArgument::REQUIRED, 'Filter in Chequer Query Language.')
             ;
         
@@ -32,12 +30,12 @@ class RunCommand extends AbstractCommand {
     }
     
     public function getOutputSets() {
-        return array();
+        return array(Ductape::SET_DATA => array());
     }
     
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
-        $elements = $this->getApplication()->getDataset(Ductape::SET_ALL);
+        $data = $this->getApplication()->getDataset(Ductape::SET_ALL);
 
         $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->getArray();
         
@@ -48,12 +46,23 @@ class RunCommand extends AbstractCommand {
         $construction = new Ductape();
         $construction->setAutoExit(false);
         // copy all sets
-        $construction->setDataset($elements, Ductape::SET_ALL);
+        $construction->setDataset($data, Ductape::SET_ALL);
         // read specified data
         $construction->setDataset($this->readInputData($input, $output), Ductape::SET_DATA);
-        
+
         $construction->runCommands($commands, $output);
+
+        $data = null;
+        $returnData = $this->getInputValue('return-data', $input);
+        if ($returnData->isEmpty()) {
+            $data = $construction->getDataset($construction->lastDataSet);
+        } elseif ($returnData->getBool()) {
+            $data = $construction->getDataset($returnData->getString());
+        }
         
+        if ($data !== null) {
+            $this->writeOutputData($data, $input, $output);
+        }
     }
 
     

@@ -22,7 +22,7 @@ class FilesCommand extends AbstractCommand {
 
         $this
                 ->setName('files')
-                ->setDescription('Finds files.')
+                ->setDescription('Finds files. If there are any files in the input, they are preserved.')
                 ->addArgument('paths', InputArgument::IS_ARRAY | InputArgument::OPTIONAL, 'Directory to look into, specific file, or glob pattern')
                 ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter in Chequer Query Language.', false)
                 ->addOption('include-dirs', null, InputOption::VALUE_OPTIONAL, 'Include directories in the output.', false)
@@ -57,6 +57,10 @@ class FilesCommand extends AbstractCommand {
         $globs = $this->getInputValue('paths', $input)->getArray();
         
         foreach($globs as $glob) {
+            if (is_file($glob)) {
+                if (!$filter || $filter($glob)) $files[] = $glob;
+                continue;
+            }
             $iterator = is_dir($glob) 
                     ? new RecursiveIteratorIterator(new RecursiveDirectoryIterator($glob, FilesystemIterator::SKIP_DOTS)) 
                     : new GlobIterator($glob, FilesystemIterator::SKIP_DOTS);

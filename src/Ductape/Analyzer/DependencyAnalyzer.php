@@ -83,7 +83,10 @@ class DependencyAnalyzer {
     
     /**  */
     public function getResults() {
-        $result = array();
+        $result = array(
+            'files' => array(),
+            'classes' => array()
+        );
         foreach($this->getClasses() as $class) {
             /* @var $class \ReflectionClass */
             $result['classes'][$class->name] = $class->getFileName();

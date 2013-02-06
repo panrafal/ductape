@@ -1,14 +1,42 @@
 [
     {
         "files": {
-            "filesIn": ["aa.txt", "bb.txt"],
-            "paths": "*.*"
+            "paths": [
+                "src/",
+                "vendor/autoload.php",
+                "vendor/composer/",
+                "vendor/stamina/chequer-php/Chequer.php",
+                "vendor/nikic/php-parser/lib/PhpParser"
+                ]
         }
     },
+
     {
-        "command" : "filter",
-        "filter": ["aa.txt"],
-        "data-out": "#stdout#"
+        "files": {
+            "paths": [
+                "vendor/symfony"
+                ],
+            "filter": {
+                "$regex" : "/\\.php/",
+                "$not" : {"$regex" : "/\\bTests\\b/i"}
+                }
+        }
+    },
+
+    {
+        "@comment": "lastone",
+        "files": {
+            "paths": [
+                "ductape.php"
+                ]
+        }
+    },
+
+    {
+        "combinePhp": {
+            "contentOut": "combined.php",
+            "comments": false
+        }
     }
 
 ]

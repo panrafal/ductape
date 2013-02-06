@@ -3,10 +3,13 @@
 namespace Ductape;
 
 use Ductape\Command\CommandInterface;
+use Ductape\Command\CommandValue;
 use Ductape\Command\Php\AnalyzePhpCommand;
 use Ductape\Command\Php\CombinePhpCommand;
+use Ductape\Command\Utility\CallCommand;
 use Ductape\Command\Utility\FilesCommand;
 use Ductape\Command\Utility\FilterCommand;
+use Ductape\Command\Utility\PipeCommand;
 use Ductape\Command\Utility\RunCommand;
 use Exception;
 use Symfony\Component\Console\Application;
@@ -38,6 +41,8 @@ class Ductape extends Application {
         $this->add(new FilesCommand());
         $this->add(new FilterCommand());
         $this->add(new RunCommand());
+        $this->add(new CallCommand());
+        $this->add(new PipeCommand());
         
         $this->setAutoExit(false);
     }
@@ -53,23 +58,6 @@ class Ductape extends Application {
     }
 
 
-    /** Returns specified dataset, or all datasets if SET_ALL is used */
-    public function getDataset($set = self::SET_DATA) {
-        if ($set === self::SET_ALL) return $this->data;
-        if (isset($this->data[$set])) return $this->data[$set];
-        return array();
-    }
-
-    
-    /** Sets specified dataset, or all datasets if SET_ALL is used */
-    public function setDataset($elements, $set = self::SET_DATA) {
-        if ($set === self::SET_ALL) 
-            $this->data = $elements;
-        else 
-            $this->data[$set] = $elements;
-    }
-    
-    
     /**
      * Run multiple commands from the array.
      * 
@@ -105,6 +93,14 @@ class Ductape extends Application {
      * ]
      * ```
      * 
+     * You can do comments by prepending '@' character to key names like this:
+     * 
+     * ```
+     * [
+     *      '@commented-out' => 'comment'
+     * ]
+     * ```
+     * 
      */
     public function runCommands($commands, OutputInterface $output = null) {
         if (!$output) $output = new NullOutput();
@@ -112,14 +108,15 @@ class Ductape extends Application {
         foreach($commands as $commandName => $params) {
             if (is_numeric($commandName)) {
                 if (!isset($params['command'])) {
-                    $commandName = key($params);
-                    $params = current($params);
+                    $this->runCommands($params, $output);
+                    continue;
                 } else {
                     $commandName = $params['command'];
                     unset($params['command']);
                 }
             }
             if (!$commandName) throw new Exception("Command name is missing!");
+            if ($commandName[0] == '@') continue;
 
             if (($result = $this->runCommand($commandName, $params, $output))) {
                 throw new Exception("Last command '$commandName' has failed with result $result");
@@ -182,9 +179,10 @@ class Ductape extends Application {
     public static function guessCommandInputFromParams(Command $command, $input) {
         $def = $command->getDefinition();
         $result = array(
-            $command->getName()
+            'command' => $command->getName()
         );
         foreach($input as $key => $value) {
+            if ($key[0] === '@') continue;
             $dashedKey = self::fromCamelCase($key);
             if ($def->hasArgument($key)) {
                 $result[$key] = $value;
@@ -198,7 +196,101 @@ class Ductape extends Application {
                 throw new \Exception("Unknown option '$key'");
             }
         }
-        return new ArrayInput($result, $command->getDefinition());
+        return new ArrayInput($result);
+    }    
+
+
+    /** Returns specified dataset, or all datasets if SET_ALL is used */
+    public function getDataset($set = self::SET_DATA) {
+        if ($set === self::SET_ALL) return $this->data;
+        if (isset($this->data[$set])) return $this->data[$set];
+        return array();
+    }
+
+    
+    /** Sets specified dataset, or all datasets if SET_ALL is used */
+    public function setDataset($elements, $set = self::SET_DATA) {
+        if ($set === self::SET_ALL) 
+            $this->data = $elements;
+        else 
+            $this->data[$set] = $elements;
+    }
+    
+
+    /** 
+     * Reads data from data source. 
+     * 
+     * @param $value Source specifier. ( "$set$", "#file#", "string", [data], ... )
+     * @param $output Output for verbose information
+     * @param $defaultSet Default dataset to use, when value is empty
+     * @param $asArray Treat data as array or string
+     * 
+     * @return array|string
+     */
+    public function readData($value, OutputInterface $output, $defaultSet = null, $asArray = false) {
+        $value = CommandValue::ensure($this, $value);
+        if ($value->isEmpty()) {
+            // default handling
+            if (!$defaultSet) return null;
+            
+            $data = $this->getDataset($defaultSet);
+            $readFrom = "\$$defaultSet\$";
+        } else {
+            $data = $asArray ? $value->getArray() : $value->getString();
+            $readFrom = $value->getShortDescription();
+        }
+        if ($output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('read %d %s from %s', is_array($data) ? count($data) : strlen($data), $defaultSet, $readFrom));
+        }
+        return $data;
+    }    
+    
+    
+    /** 
+     * Writes data to datasource 
+     * 
+     * @param $value Destination specifier. ( "$set$", "#file#", "file" )
+     * @param $asArray When TRUE and the data is a string, it will be split into an array.
+     * 
+     */
+    public function writeData($data, $value, OutputInterface $output, $defaultSet = null, $asArray = false) {
+        $value = CommandValue::ensure($this, $value);
+        
+        if ($asArray && is_string($data)) {
+            $data = preg_split('/\r?\n/', $data, -1, PREG_SPLIT_NO_EMPTY);
+        }
+        
+        if ($value->isEmpty()) {
+            // default handling
+            if (!$defaultSet) return;
+            $this->setDataset($data, $defaultSet);
+            $wroteTo = "\$$defaultSet\$";
+        } else {
+            if ($value->isElementsSet()) {
+                $this->setDataset($data, $value->getSetId());
+            } elseif ($value->getFilePath()) {
+                if (is_string($data)) {
+                    $dataString = $data;
+                } else {
+                    if (!count($data) || isset($data[0])) {
+                        // probably an array. store line-by-line
+                        $dataString = implode("\n", $data);
+                    } else {
+                        // everything else store as JSON
+                        $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                    }
+                }
+                if ($value->getFilePath() === 'php://stdout') {
+                    $output->write($dataString, OutputInterface::OUTPUT_RAW);
+                } else {
+                    file_put_contents($value->getFilePath(), $dataString);
+                }
+            }
+            $wroteTo = $value->getShortDescription();
+        }
+        if ($output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('wrote %d %s to %s', is_array($data) ? count($data) : strlen($data), $defaultSet, $wroteTo));
+        }
     }    
     
 }

@@ -10,9 +10,9 @@ namespace Ductape\Analyzer;
 class ProcessAnalyzer {
     
     public function analyzeFile($file, $globals = array(), $loadClasses = array()) {
-        $code = file_get_contents($file);
-        if (!$code) throw new \Exception("File not found!");
+        if (!is_file($file)) throw new \Exception("File not found!");
         $cwd = dirname(realpath($file));
+        $code = '<?php require_once("'.addslashes(realpath($file)).'"); ?>';
         return $this->analyzeCode($code, $cwd, $globals, $loadClasses);
     }
     
@@ -32,8 +32,8 @@ class ProcessAnalyzer {
             $env[$k] = $v;
         }
         
-        $env['PHP_BUILDER'] = 1;
-        $env['PHP_BUILDER_OPTIONS'] = serialize($options);
+        $env['DUCTAPE'] = 1;
+        $env['DUCTAPE_OPTIONS'] = serialize($options);
         
         $code = $this->generateCode($code);
         
@@ -46,12 +46,22 @@ class ProcessAnalyzer {
         
         $dump = file_get_contents($dumpFile);
         unlink($dumpFile);
-        if ($dump) $dump = unserialize($dump);
-        else $dump = null;
+        if ($dump) {
+            $dump = unserialize($dump);
+            $dump['success'] = true;
+        } else {
+            $dump = array(
+                'success' => false
+            );
+        }
+        
+        $dump['output'] = $process->getOutput();
+        $dump['errorOutput'] = $process->getErrorOutput();
         
         return $dump;
     }
     
+    /** decorated code cannot have namespace declaration! */
     protected function generateCode($code) {
         $code = '<?php
                 require_once("'.addslashes(realpath(__DIR__ . '/ProcessAnalyzerInjection.php')).'");

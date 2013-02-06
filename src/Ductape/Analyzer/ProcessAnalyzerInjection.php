@@ -15,10 +15,10 @@ class ProcessAnalyzerInjection {
     }
     
     public function start() {
-        if (!isset($_SERVER["PHP_BUILDER"]) || !isset($_SERVER["PHP_BUILDER_OPTIONS"])) {
+        if (!isset($_SERVER["DUCTAPE"]) || !isset($_SERVER["DUCTAPE_OPTIONS"])) {
             throw \Exception("Missing BUILDER environment!");
         }
-        $this->options = unserialize($_SERVER["PHP_BUILDER_OPTIONS"]);
+        $this->options = unserialize($_SERVER["DUCTAPE_OPTIONS"]);
         
         foreach ($this->options['globals'] as $k => $v) {
             if (isset($GLOBALS[$k]) && is_array($GLOBALS[$k])) {
@@ -29,12 +29,18 @@ class ProcessAnalyzerInjection {
         }
         
         register_shutdown_function(array($this, 'finish'));
-//        ob_start();
     }
     
     public function finish() {
-//        ob_end_clean();
         echo "\n\nScript finished here <------------------\n";
+        
+        $error = error_get_last();
+        
+        if ($error && in_array($error['type'], array(E_ERROR, E_PARSE, E_COMPILE_ERROR))) {
+            echo "\nScript failure detected!";
+            return;
+        }
+        
         if ( !empty($this->options['loadClasses']) ) {
             foreach($this->options['loadClasses'] as $class) {
                 if (!class_exists($class)) {

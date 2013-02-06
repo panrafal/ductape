@@ -89,8 +89,9 @@ class AnalyzePhpCommand extends AbstractCommand {
 
                 $result = $pa->analyzeFile($script, $env, $classesIn);
 
-                if (!$result) {
-                    $output->writeln("Script failed!");
+                if (!$result['success']) {
+                    $output->writeln("Script output: \n" . $result['output']);
+                    $output->writeln("\nScript failed!");
                     exit(1);
                 }
 

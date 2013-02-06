@@ -72,7 +72,6 @@ abstract class AbstractCommand extends Command implements CommandInterface {
                     return;
                 }
             }
-            var_dump($input->getOptions());
             if ($this->getInputValue($sets[0] . '-' . $direction, $input)->isEmpty()) {
                 $this->setInputValue($sets[0] . '-' . $direction, $file, $input);
             }
@@ -166,7 +165,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
     }
     
     
-    protected function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
+    protected function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $asArray = true) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -174,22 +173,12 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         if ($set === Ductape::SET_DATA) $set = $sets[0];
         
         $value = $this->getInputValue($set . '-in', $input);
-        if ($value->isEmpty()) {
-            // default handling
-            $data = $this->getApplication()->getDataset($set);
-            $readFrom = "\$$set\$";
-        } else {
-            $data = $value->getArray();
-            $readFrom = $value->getShortDescription();
-        }
-        if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            $output->writeln(sprintf('read %d %s from %s', count($data), $set, $readFrom));
-        }
-        return $data;
+        
+        return $this->getApplication()->readData($value, $output, $set, $asArray);
     }
     
     
-    protected function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
+    protected function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $asArray = false) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -197,31 +186,8 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         if ($set === Ductape::SET_DATA) $set = $sets[0];
 
         $value = $this->getInputValue($set . '-out', $input);
-        if ($value->isEmpty()) {
-            // default handling
-            $this->getApplication()->setDataset($data, $set);
-            $wroteTo = "\$$set\$";
-        } else {
-            if ($value->isElementsSet()) {
-                $this->getApplication()->setDataset($data, $value->getSetId());
-            } elseif ($value->getFilePath()) {
-                if (!count($data) || isset($data[0])) {
-                    $dataString = implode("\n", $data);
-                } else {
-                    $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                }
-                if ($value->getFilePath() === 'php://stdout') {
-                    $output->write($dataString, OutputInterface::OUTPUT_RAW);
-                } else {
-                    file_put_contents($value->getFilePath(), $dataString);
-                }
-            }
-            $wroteTo = $value->getShortDescription();
-        }
-        if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            $output->writeln(sprintf('wrote %d %s to %s', count($data), $set, $wroteTo));
-        }
         
+        $this->getApplication()->writeData($data, $value, $output, $set, $asArray);
     }
 
     

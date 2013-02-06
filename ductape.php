@@ -10,3 +10,4 @@ if (file_exists($a = __DIR__.'/../../autoload.php')) {
 
 $application = new Ductape\Ductape();
 $application->run();
+

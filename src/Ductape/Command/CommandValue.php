@@ -2,10 +2,14 @@
 
 namespace Ductape\Command;
 
+use Ductape\Ductape;
+use Exception;
+use Symfony\Component\Console\Command\Command;
+
 class CommandValue {
 
-    /** @var AbstractCommand */
-    protected $command;
+    /** @var Ductape */
+    protected $ductape;
     protected $value;
     protected $identifier;
     protected $type;
@@ -19,20 +23,28 @@ class CommandValue {
     const TYPE_FILE = 'file';
     const TYPE_SET = 'set';
 
+    /** @return CommandValue */
+    public static function ensure($ductape, $value) {
+        if ($value instanceof CommandValue) return $value;
+        return new CommandValue($ductape, $value);
+    }
+    
     /**
-     * @param $command
+     * @param $ductape
      * @param $value Value to parse
      * @param $defaultType - Default type to assume for strings - string, file, set or json
      * @param $allowArray - TRUE to enable recursive parsing of arrays (not hashmaps!)
      */
-    function __construct( $command, $value, $defaultType = self::TYPE_STRING, $allowArray = false ) {
+    function __construct( $ductape, $value, $defaultType = self::TYPE_STRING, $allowArray = false ) {
+        if ($ductape instanceof Command) $ductape = $ductape->getApplication();
+        
         if ($allowArray && is_array($value)) {
             if (!count($value)) $value = null;
             elseif (count($value) == 1) $value = $value[0];
         }
         
         $this->defaultType = $defaultType;
-        $this->command = $command;
+        $this->ductape = $ductape;
         $this->value = $value;
         
         $this->parse($allowArray);
@@ -123,7 +135,7 @@ class CommandValue {
             
             $result = '';
             foreach ($this->value as $value) {
-                $value = new CommandValue($this->command, $value, $this->defaultType, false);
+                $value = new CommandValue($this->ductape, $value, $this->defaultType, false);
                 $result .= $value->getString();
             }
             return $result;
@@ -148,6 +160,7 @@ class CommandValue {
             if (strcasecmp($this->value, 'no') === 0) return false;
             if (strcasecmp($this->value, 'off') === 0) return false;
             if (strcasecmp($this->value, 'null') === 0) return false;
+            if (strcasecmp($this->value, '-') === 0) return false;
         }
         return $this->value == true;
     }
@@ -158,25 +171,25 @@ class CommandValue {
             
             $result = array();
             foreach ($this->value as $value) {
-                $value = new CommandValue($this->command, $value, $this->defaultType);
+                $value = new CommandValue($this->ductape, $value, $this->defaultType);
                 $result = array_merge($result, $value->getArray());
             }
             return $result;
             
         } elseif ($this->type === self::TYPE_SET) {
             
-            return $this->command->getApplication()->getDataset($this->getSetId());
+            return $this->ductape->getDataset($this->getSetId());
             
         } elseif ($this->type === self::TYPE_FILE) {
             
             $value = $this->getFileContents();
-            $value = (new CommandValue($this->command, $value));
+            $value = (new CommandValue($this->ductape, $value));
             return $value->getArray();
 
         } elseif ($this->type === self::TYPE_JSON) {
             
             $value = json_decode($this->value, JSON_OBJECT_AS_ARRAY);
-            if (json_last_error()) throw new \Exception("Json format is incorrect in: '{$this->value}'");
+            if (json_last_error()) throw new Exception("Json format is incorrect in: '{$this->value}'");
             return $value;
             
         } elseif ($this->type === self::TYPE_OBJECT) {
