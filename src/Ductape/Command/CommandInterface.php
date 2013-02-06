@@ -11,6 +11,6 @@ interface CommandInterface {
     function getOutputSets();
 
     /** @return Input */
-    function createInputFromOptions($options);
+    function createInputFromParams($options);
     
 }

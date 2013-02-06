@@ -165,7 +165,7 @@ class CommandValue {
             
         } elseif ($this->type === self::TYPE_SET) {
             
-            return $this->command->getApplication()->getDataSet($this->getSetId());
+            return $this->command->getApplication()->getDataset($this->getSetId());
             
         } elseif ($this->type === self::TYPE_FILE) {
             

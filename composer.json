@@ -1,5 +1,5 @@
 {
-    "name": "stamina/aqueduct",
+    "name": "stamina/ductape",
     "type": "library",
     "description": "",
     "keywords": [],
@@ -14,7 +14,7 @@
     "require": {
         "php": ">=5.3.3",
         "nikic/php-parser" : ">=0.9.2",
-        "stamina/chequer-php" : "1.*",
+        "stamina/chequer-php" : "@dev",
         "symfony/console": "2.*",
         "symfony/process": "2.*"
     },

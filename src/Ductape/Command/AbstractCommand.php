@@ -45,6 +45,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $this->getDefinition()->addOptions($options);
     }
 
+    
     protected function getVerboseInfo(InputInterface $input, OutputInterface $output) {
         $s = "\n------------------------------\n";
         $s .= "Running <comment>".$this->getName()."</comment> with options: ";
@@ -77,6 +78,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
             }
         }
     }
+    
     
     private function setupDefaultDataSetsRedirection(InputInterface $input) {
         $inSets = array_keys($this->getInputSets());
@@ -134,6 +136,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         return parent::getApplication();
     }
 
+    
     /** @return CommandValue */
     public function getInputValue($name, InputInterface $input, $defaultType = CommandValue::TYPE_STRING) {
         $value = null;
@@ -150,6 +153,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         return new CommandValue($this, $value, $defaultType, $allowArray);
     }
     
+    
     public function setInputValue($name, $value, InputInterface $input) {
         if ($value instanceof CommandValue) $value = $value->raw();
         if ($input->hasArgument($name)) {
@@ -161,7 +165,8 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         }
     }
     
-    public function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
+    
+    protected function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -171,7 +176,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $value = $this->getInputValue($set . '-in', $input);
         if ($value->isEmpty()) {
             // default handling
-            $data = $this->getApplication()->getDataSet($set);
+            $data = $this->getApplication()->getDataset($set);
             $readFrom = "\$$set\$";
         } else {
             $data = $value->getArray();
@@ -183,7 +188,8 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         return $data;
     }
     
-    public function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
+    
+    protected function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -193,11 +199,11 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $value = $this->getInputValue($set . '-out', $input);
         if ($value->isEmpty()) {
             // default handling
-            $this->getApplication()->setDataSet($data, $set);
+            $this->getApplication()->setDataset($data, $set);
             $wroteTo = "\$$set\$";
         } else {
             if ($value->isElementsSet()) {
-                $this->getApplication()->setDataSet($data, $value->getSetId());
+                $this->getApplication()->setDataset($data, $value->getSetId());
             } elseif ($value->getFilePath()) {
                 if (!count($data) || isset($data[0])) {
                     $dataString = implode("\n", $data);
@@ -218,9 +224,10 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         
     }
 
+    
     /** @return Input */
-    public function createInputFromOptions($options) {
-        return Utility\RunCommand::guessInputFromOptions($this, $options);
+    public function createInputFromParams($options) {
+        return Ductape::guessCommandInputFromParams($this, $options);
     }
 
     
