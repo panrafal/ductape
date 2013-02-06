@@ -3,11 +3,9 @@
 namespace Ductape\Command\Php;
 
 use Chequer;
-use Ductape\Analyzer\ProcessAnalyzer;
 use Ductape\Command\AbstractCommand;
 use Ductape\Command\CommandValue;
 use Ductape\Ductape;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -36,9 +34,11 @@ class CombinePhpCommand extends AbstractCommand {
     }
     
     public function getOutputSets() {
-        return array('content' => array(
-            'description' => 'Where to store the combined source.'
-        ));
+        return array(
+            'content' => array(
+                'description' => 'Where to store the combined source.'
+            ),
+        );
     }
     
     protected function execute( InputInterface $input, OutputInterface $output ) {

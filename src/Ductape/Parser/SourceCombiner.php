@@ -12,10 +12,21 @@ use Chequer;
 use Ductape\Utility\FileHelper;
 use Exception;
 use PHPParser_Lexer;
+use PHPParser_Node;
+use PHPParser_Node_Expr_ClassConstFetch;
 use PHPParser_Node_Expr_Include;
+use PHPParser_Node_Expr_New;
+use PHPParser_Node_Expr_StaticCall;
+use PHPParser_Node_Expr_StaticPropertyFetch;
+use PHPParser_Node_Name;
 use PHPParser_Node_Scalar_DirConst;
 use PHPParser_Node_Scalar_FileConst;
+use PHPParser_Node_Stmt_Class;
+use PHPParser_Node_Stmt_Interface;
 use PHPParser_Node_Stmt_Namespace;
+use PHPParser_Node_Stmt_Trait;
+use PHPParser_Node_Stmt_TraitUse;
+use PHPParser_Node_Stmt_UseUse;
 use PHPParser_Parser;
 use PHPParser_PrettyPrinter_Zend;
 
@@ -50,9 +61,18 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
     protected $includesFilter = null;
     protected $allowMissingIncludes = true;
     protected $baseDir = null;
-    protected $parseStack = array();
-    protected $includedFiles = array();
 
+    protected $currentFile = null;
+    protected $currentSyntaxTree = null;
+    /** @var PHPParser_Node_Stmt_Namespace */
+    protected $currentNamespace = null;
+    protected $currentUsemap = array();
+    
+    /** class => file */
+    protected $classmap = array();
+    /* file => [ code => , classes => needed , files => needed ] */
+    protected $parsedFiles = array();
+    protected $unknownClasses = array();
     
     /**
      * @param $combineFiles Array of files to combine.
@@ -63,7 +83,6 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
             if (!is_file($file)) throw new Exception("File '$file' does not exist!");
             $this->combineFiles[] = realpath($file);
         }
-        $this->includedFiles = $this->combineFiles;
     }
 
 
@@ -120,6 +139,30 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
     }
 
 
+    /** Returns classmap as [classname => filepath, ...] */
+    public function getClassmap() {
+        return $this->classmap;
+    }
+
+
+    /** Returns information about parsed files as 
+     * [filepath => [ 
+     *      code => source code
+     *      classes => [[classname => count first level references], ...]
+     *      files => [[filepath => count references], ...]
+     * ],
+     *  ...] */
+    public function getParsedFilesInfo() {
+        return $this->parsedFiles;
+    }
+
+
+    /** Returns unknown classes as [class => count of dependant files] */
+    public function getUnknownClasses() {
+        return $this->unknownClasses;
+    }
+
+
     public function combine( $outputFile = false ) {
 
         if ($this->baseDir == false) $this->baseDir = $outputFile ? dirname($outputFile) : getcwd();
@@ -127,10 +170,23 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
 
         $code = '<?php' . PHP_EOL;
 
-        foreach ($this->combineFiles as $file) {
-            $code .= $this->parseFile($file);
+        // make the first run
+        while ($this->combineFiles) {
+            $file = array_shift($this->combineFiles);
+            $this->parseFile($file);
         }
 
+        // resolve classes into files
+        $this->resolveParsedClassnames();
+        
+        // fold back the code using dependency
+        $foldedFiles = array();
+        foreach($this->parsedFiles as $file => $info) {
+            $this->foldbackCode($file, $code, $dump, $foldedFiles);
+        }
+        
+        $this->parsedFiles = $foldedFiles;
+        
         if ($outputFile) {
             file_put_contents($outputFile, $code);
         } else {
@@ -138,10 +194,20 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         }
     }
 
-
+    
     protected function parseFile( $file ) {
+        if ($this->currentFile) throw new Exception('Only one file at a time!');
         if (!is_file($file)) throw new Exception("File '$file' not found!");
 
+        if (isset($this->parsedFiles[$file])) return $this->parsedFiles[$file]['code'];
+
+        // initialize the file's table
+        $this->parsedFiles[$file] = array(
+            'code' => false,
+            'classes' => array(),
+            'files' => array()
+        );
+        
         $code = file_get_contents($file);
 
         // Create parser
@@ -158,33 +224,57 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         }
 
         // keep track of currently parsed file
-        array_push($this->parseStack, array(
-            'file' => $file,
-            'tree' => $syntaxTree
-        ));
+        $this->currentFile = $file;
+        $this->currentSyntaxTree = $syntaxTree;
         
         // Convert syntax tree back to PHP statements:
         $compiled = $this->prettyPrint($syntaxTree);
+        
+        $this->parsedFiles[$file]['code'] = $compiled;
 
-        array_pop($this->parseStack);
+        $this->currentFile = $this->currentSyntaxTree = null;
 
         return $compiled;
     }
 
-
-    protected function &getCurrentlyParsed($node = null) {
-        if ($node) {
-            return $this->parseStack[count($this->parseStack) - 1][$node];
-        } else {
-            return $this->parseStack[count($this->parseStack) - 1];
+    
+    protected function resolveParsedClassnames() {
+        // for every parsed file and every dependent class...
+        foreach($this->parsedFiles as $file => &$info) {
+            foreach($info['classes'] as $class => $count) {
+                if (isset($this->classmap[$class])) {
+                    // make it into dependent file...
+                    $this->incrementSubkey($info['files'], $this->classmap[$class]);
+                } else {
+                    // or remember and not forgive!
+                    $this->incrementSubkey($this->unknownClasses, $class);
+                }
+            }
         }
     }
 
-    
-    protected function getCurrentlyParsedFile() {
-        return $this->getCurrentlyParsed('file');
-    }
 
+    protected function foldbackCode($file, &$code, &$foldedFiles) {
+        if (isset($foldedFiles[$file])) return;
+        $foldedFiles[$file] = $this->parsedFiles[$file];
+        
+        // fold parents first!
+        foreach($this->parsedFiles[$file]['files'] as $parentFile => $count) {
+            $this->foldbackCode($parentFile, $code, $foldedFiles);
+        }
+        
+        $code .= $this->parsedFiles[$file]['code'] . "\n";
+    }
+    
+
+    protected function incrementSubkey(&$array, $key, $inc = 1) {
+        if (isset($array[$key])) {
+            $array[$key] += $inc;
+        } else {
+            $array[$key] = $inc;
+        }
+    }
+    
     
     /* -- printer functions --------------------------------------------------------------- */
 
@@ -199,13 +289,13 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         return $comments;
     }
 
-
+    
     public function pExpr_Include( PHPParser_Node_Expr_Include $node ) {
         if ( 
                 $node->type == PHPParser_Node_Expr_Include::TYPE_INCLUDE_ONCE 
              || $node->type == PHPParser_Node_Expr_Include::TYPE_REQUIRE_ONCE
         ) {
-            $currentFile = $this->getCurrentlyParsedFile();
+            $currentFile = $this->currentFile;
             $file = ParserHelper::resolveNodeValue($node->expr, array(
                 '__DIR__' => dirname($currentFile),
                 '__FILE__' => $currentFile
@@ -215,48 +305,27 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
                 if ($this->allowMissingIncludes) {
                     return parent::pExpr_Include($node);
                 } else {
-                    throw new Exception(sprintf("Include file '%s' not found in %s @ %d", $file, $this->getCurrentlyParsedFile(), $node->getLine()));
+                    throw new Exception(sprintf("Include file '%s' not found in %s @ %d", $file, $this->currentFile, $node->getLine()));
                 }
             }
             
             $file = realpath($file);
 
-            if (in_array($file, $this->includedFiles)) {
+            /* we remove the include if it was or will be parsed, or the filter allows for it... */
+            if (isset($this->parsedFiles[$file]) || in_array($file, $this->combineFiles) || !$this->includesFilter || $this->includesFilter($file)) {
+
+                // mark current file as dependent if on first level
+                if ($this->isNodeOnFirstLevel($node)) {
+                    $this->incrementSubkey($this->parsedFiles[$this->currentFile]['files'], $file);
+                }
+                
+                // parse it, if not done already...
+                if (!isset($this->parsedFiles[$file]) && !in_array($file, $this->combineFiles)) {
+                    $this->combineFiles[] = $file;
+                }
+                
                 // protection from ; suffixed by pretty printer
                 return '//';
-            }
-            
-            // check where we are in the node tree
-            $syntaxTree = $this->getCurrentlyParsed('tree');
-            
-            // first nodes are guaranteed to be namespaces
-            $namespace = false;
-            foreach($syntaxTree as $namespaceNode) {
-                if ($namespaceNode instanceof \PHPParser_Node_Stmt_Namespace == false)
-                    throw new Exception("Namespace was expected, " . $namespaceNode->getType() . " was found");
-                
-                if (in_array($node, $namespaceNode->stmts, true)) {
-                    $namespace = $namespaceNode;
-                    break;
-                }
-            }
-            if ($namespace) {
-                if (!$this->includesFilter || $this->includesFilter($file)) {
-                    // if it passed the filter, let's rock!
-                    $this->includedFiles[] = $file;
-                    
-                    // close current namespace...
-                    $code = "}\n/* include_once ".basename($file)." */\n";
-                    $code .= $this->parseFile($file);
-                    
-                    // reopen the namespace
-                    $code .= "\nnamespace" . (null !== $namespace->name ? ' ' . $this->p($namespace->name) : '') . " {";
-                    // protection from ; suffixed by pretty printer
-                    $code .= '//';
-                    return $code;
-                }
-            } else {
-                // we shall leave it intact
             }
             
         }
@@ -265,22 +334,138 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
     }
 
 
-    public function pStmt_Namespace( PHPParser_Node_Stmt_Namespace $node ) {
-        return parent::pStmt_Namespace($node);
-    }
-
-
     public function pScalar_DirConst( PHPParser_Node_Scalar_DirConst $node ) {
-        $path = FileHelper::relativePath($this->baseDir, dirname($this->getCurrentlyParsedFile()), '/');
+        $path = FileHelper::relativePath($this->baseDir, dirname($this->currentFile), '/');
         if ($path) $path = '/' . $path;
         return "__DIR__ . '" . addslashes($path) . "' /*__DIR__*/";
     }
 
 
     public function pScalar_FileConst( PHPParser_Node_Scalar_FileConst $node ) {
-        $path = FileHelper::relativePath($this->baseDir, $this->getCurrentlyParsedFile(), '/');
+        $path = FileHelper::relativePath($this->baseDir, $this->currentFile, '/');
         if ($path) $path = '/' . $path;
         return "__DIR__ . '" . addslashes($path) . "' /*__FILE__*/";
+    }
+
+    
+    protected function resolveClassName($node) {
+        if ($node instanceof PHPParser_Node_Name) {
+            /* @var $node PHPParser_Node_Name */
+            if ($node->isFullyQualified()) return (string)$node;
+            $node = $node->parts;
+        } else {
+            $node = (array)$node;
+        }
+        // check uses
+        if (isset($this->currentUsemap[$node[0]])) {
+            $node[0] = $this->currentUsemap[$node[0]];
+            return implode('\\', $node);
+        } else {
+            // it's relative to current...
+            return ($this->currentNamespace->name ? $this->currentNamespace->name . '\\' : '')
+                . implode('\\', $node);
+            ;
+        }
+    }
+    
+    
+    protected function addDependentClass($node) {
+        $this->incrementSubkey($this->parsedFiles[$this->currentFile]['classes'], $this->resolveClassName($node));
+    }
+    
+    
+    protected function addClass($node) {
+        $this->classmap[$this->resolveClassName($node)] = $this->currentFile;
+    }
+
+
+    /** @return \PHPParser_Node_Stmt_Namespace */
+    protected function isNodeOnFirstLevel(PHPParser_Node $node) {
+        if ($this->currentNamespace) {
+            if (in_array($node, $this->currentNamespace->stmts, true)) {
+                return $this->currentNamespace;
+            }
+        }
+        return null;
+    }
+    
+
+    public function pStmt_Namespace( PHPParser_Node_Stmt_Namespace $node ) {
+        $this->currentNamespace = $node;
+        $this->currentUsemap = array();
+        $code = parent::pStmt_Namespace($node);
+        $this->currentNamespace = null;
+        $this->currentUsemap = array();
+        return $code;
+    }
+
+
+    public function pStmt_UseUse( PHPParser_Node_Stmt_UseUse $node ) {
+        $this->currentUsemap[$node->alias ? $node->alias : $node->name->getLast()] = (string) $node->name;
+        return parent::pStmt_UseUse($node);
+    }
+
+
+    public function pStmt_Class( PHPParser_Node_Stmt_Class $node ) {
+        $this->addClass($node->name);
+        if ($node->extends) $this->addDependentClass($node->extends);
+        foreach ($node->implements as $name) {
+            $this->addDependentClass($name);
+        }
+        return parent::pStmt_Class($node);
+    }
+
+
+    public function pStmt_Interface( PHPParser_Node_Stmt_Interface $node ) {
+        $this->addClass($node->name);
+        if ($node->extends) $this->addDependentClass($node->extends);
+        return parent::pStmt_Interface($node);
+    }
+
+
+    public function pStmt_Trait( PHPParser_Node_Stmt_Trait $node ) {
+        $this->addClass($node->name);
+        return parent::pStmt_Trait($node);
+    }
+
+
+    public function pStmt_TraitUse( PHPParser_Node_Stmt_TraitUse $node ) {
+        foreach ($node->traits as $name) {
+            $this->addDependentClass($name);
+        }
+        return parent::pStmt_TraitUse($node);
+    }
+
+
+    public function pExpr_ClassConstFetch( PHPParser_Node_Expr_ClassConstFetch $node ) {
+        if ($this->isNodeOnFirstLevel($node)) {
+            $this->addDependentClass($node->class);
+        }
+        return parent::pExpr_ClassConstFetch($node);
+    }
+
+
+    public function pExpr_New( PHPParser_Node_Expr_New $node ) {
+        if ($this->isNodeOnFirstLevel($node)) {
+            $this->addDependentClass($node->class);
+        }
+        return parent::pExpr_New($node);
+    }
+
+
+    public function pExpr_StaticCall( PHPParser_Node_Expr_StaticCall $node ) {
+        if ($this->isNodeOnFirstLevel($node)) {
+            $this->addDependentClass($node->class);
+        }
+        return parent::pExpr_StaticCall($node);
+    }
+
+
+    public function pExpr_StaticPropertyFetch( PHPParser_Node_Expr_StaticPropertyFetch $node ) {
+        if ($this->isNodeOnFirstLevel($node)) {
+            $this->addDependentClass($node->class);
+        }
+        return parent::pExpr_StaticPropertyFetch($node);
     }
 
 

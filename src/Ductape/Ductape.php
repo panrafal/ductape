@@ -109,6 +109,9 @@ class Ductape extends Application {
         
         foreach($commands as $commandName => $params) {
             if (is_numeric($commandName)) {
+                if (!is_array($params)) {
+                    continue;
+                }
                 if (!isset($params['command'])) {
                     $this->runCommands($params, $output);
                     continue;
