@@ -6,6 +6,7 @@ use Ductape\Command\CommandInterface;
 use Ductape\Command\CommandValue;
 use Ductape\Command\Php\AnalyzePhpCommand;
 use Ductape\Command\Php\CombinePhpCommand;
+use Ductape\Command\Php\PharCommand;
 use Ductape\Command\Utility\CallCommand;
 use Ductape\Command\Utility\FilesCommand;
 use Ductape\Command\Utility\FilterCommand;
@@ -43,6 +44,7 @@ class Ductape extends Application {
         $this->add(new RunCommand());
         $this->add(new CallCommand());
         $this->add(new PipeCommand());
+        $this->add(new PharCommand());
         
         $this->setAutoExit(false);
     }

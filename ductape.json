@@ -33,9 +33,16 @@
     },
 
     {
-        "combinePhp": {
+        "@combinePhp": {
             "contentOut": "combined.php",
             "comments": false
+        }
+    },
+
+    {
+        "phar": {
+            "phar": "ductape.phar",
+            "stubFile": ["ductape.php"]
         }
     }
 
