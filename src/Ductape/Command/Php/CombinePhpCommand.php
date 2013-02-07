@@ -38,6 +38,21 @@ class CombinePhpCommand extends AbstractCommand {
             'content' => array(
                 'description' => 'Where to store the combined source.'
             ),
+            'classmap' => array(
+                'description' => 'Where to store the combined source.'
+            ),
+            'classes' => array(
+                'description' => 'Where to store the combined source.'
+            ),
+            'files' => array(
+                'description' => 'Where to store the combined source.'
+            ),
+            'files-info' => array(
+                'description' => 'Where to store the combined source.'
+            ),
+            'classes-unknown' => array(
+                'description' => 'Where to store the combined source.'
+            ),
         );
     }
     
@@ -63,7 +78,23 @@ class CombinePhpCommand extends AbstractCommand {
 
         $code = $combiner->combine();
         
-        $this->writeOutputData($code, $input, $output, 'content', false);
+        $this->writeOutputData($code, $input, $output, 'content', Ductape::MODE_CONTENT);
+        
+        if ($this->getOutputDataValue($input, 'classmap', false)->isEmpty() == false) {
+            $this->writeOutputData($combiner->getClassmap(), $input, $output, 'classmap', Ductape::MODE_ARRAY);
+        }
+        if ($this->getOutputDataValue($input, 'classes', false)->isEmpty() == false) {
+            $this->writeOutputData(array_keys($combiner->getClassmap()), $input, $output, 'classes', Ductape::MODE_ARRAY);
+        }
+        if ($this->getOutputDataValue($input, 'files', false)->isEmpty() == false) {
+            $this->writeOutputData(array_keys($combiner->getParsedFilesInfo()), $input, $output, 'files', Ductape::MODE_ARRAY);
+        }
+        if ($this->getOutputDataValue($input, 'files-info', false)->isEmpty() == false) {
+            $this->writeOutputData($combiner->getParsedFilesInfo(), $input, $output, 'files-info', Ductape::MODE_ARRAY);
+        }
+        if ($this->getOutputDataValue($input, 'classes-unknown', false)->isEmpty() == false) {
+            $this->writeOutputData(array_keys($combiner->getUnknownClasses()), $input, $output, 'classes-unknown', Ductape::MODE_ARRAY);
+        }
         
     }
 

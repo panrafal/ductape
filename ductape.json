@@ -12,7 +12,7 @@
     },
 
     {
-        "@files": {
+        "files": {
             "paths": [
                 "vendor/symfony"
                 ],
@@ -34,8 +34,13 @@
 
     {
         "combinePhp": {
-            "contentOut": "combined.php",
-            "comments": false
+            "contentOut": "ductape-combined.php",
+            "comments": false,
+            "classmapOut": "combined-classmap.json",
+            "classesOut": "combined-classes.json",
+            "filesOut": "combined-files.json",
+            "classesUnknownOut": "combined-classes-unknown.json",
+            "filesInfoOut": "combined-files-info.json"
         }
     },
 

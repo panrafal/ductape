@@ -163,9 +163,11 @@ abstract class AbstractCommand extends Command implements CommandInterface {
             throw new Exception("Value {$name} is not defined!");
         }
     }
-    
-    
-    protected function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $asArray = true) {
+
+    /** Returns input value controlling the data input 
+     * @return CommandValue
+     */
+    protected function getInputDataValue(InputInterface $input, $set = Ductape::SET_DATA, $setDefault = true) {
         $sets = array_keys($this->getInputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -174,11 +176,14 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         
         $value = $this->getInputValue($set . '-in', $input);
         
-        return $this->getApplication()->readData($value, $output, $set, $asArray);
+        if ($setDefault && $value->isEmpty()) $value = CommandValue::createSetId($this->getApplication(), $set);
+        return $value;
     }
     
-    
-    protected function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $asArray = false) {
+    /** Returns input value controlling the data output
+     * @return CommandValue
+     */
+    protected function getOutputDataValue(InputInterface $input, $set = Ductape::SET_DATA, $setDefault = true) {
         $sets = array_keys($this->getOutputSets());
         
         if (!$sets) throw new Exception('No input sets defined!');
@@ -187,7 +192,16 @@ abstract class AbstractCommand extends Command implements CommandInterface {
 
         $value = $this->getInputValue($set . '-out', $input);
         
-        $this->getApplication()->writeData($data, $value, $output, $set, $asArray);
+        if ($setDefault && $value->isEmpty()) $value = CommandValue::createSetId($this->getApplication(), $set);
+        return $value;
+    }
+    
+    protected function readInputData(InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $mode = Ductape::MODE_ARRAY) {
+        return $this->getApplication()->readData($this->getInputDataValue($input, $set), $output, $set, $mode);
+    }
+    
+    protected function writeOutputData($data, InputInterface $input, OutputInterface $output, $set = Ductape::SET_DATA, $mode = Ductape::MODE_ARRAY) {
+        $this->getApplication()->writeData($data, $this->getOutputDataValue($input, $set), $output, $set, $mode);
     }
 
     

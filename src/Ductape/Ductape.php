@@ -31,6 +31,10 @@ class Ductape extends Application {
     const SET_DATA = 'data';
     const SET_FILES = 'files';
     
+    const MODE_STRING = 'string';
+    const MODE_ARRAY = 'array';
+    const MODE_CONTENT = 'content';
+    
     public $lastDataSet = self::SET_DATA;
 
     
@@ -227,25 +231,28 @@ class Ductape extends Application {
      * 
      * @param $value Source specifier. ( "$set$", "#file#", "string", [data], ... )
      * @param $output Output for verbose information
-     * @param $defaultSet Default dataset to use, when value is empty
+     * @param $setName Default dataset to use, when value is empty
      * @param $asArray Treat data as array or string
      * 
      * @return array|string
      */
-    public function readData($value, OutputInterface $output, $defaultSet = null, $asArray = false) {
+    public function readData($value, OutputInterface $output, $setName = null, $mode = self::MODE_ARRAY) {
         $value = CommandValue::ensure($this, $value);
-        if ($value->isEmpty()) {
-            // default handling
-            if (!$defaultSet) return null;
-            
-            $data = $this->getDataset($defaultSet);
-            $readFrom = "\$$defaultSet\$";
+        
+        if ($mode == self::MODE_ARRAY) {
+            $data = $value->getArray();
+        } elseif ($mode == self::MODE_CONTENT) {
+            $data = $value->getContent();
         } else {
-            $data = $asArray ? $value->getArray() : $value->getString();
-            $readFrom = $value->getShortDescription();
+            $data = $value->getString();
         }
-        if ($output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            $output->writeln(sprintf('read %d %s from %s', is_array($data) ? count($data) : strlen($data), $defaultSet, $readFrom));
+            
+        if ($value->isEmpty() == false && $output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('read %s%s of %s from %s', 
+                    is_array($data) ? count($data) : round(strlen($data)/1024,2), 
+                    is_array($data) ? ' lines' : 'Kb',
+                    $setName, 
+                    $value->getShortDescription()));
         }
         return $data;
     }    
@@ -258,43 +265,23 @@ class Ductape extends Application {
      * @param $asArray When TRUE and the data is a string, it will be split into an array.
      * 
      */
-    public function writeData($data, $value, OutputInterface $output, $defaultSet = null, $asArray = false) {
+    public function writeData($data, $value, OutputInterface $output, $setName = null, $mode = self::MODE_ARRAY) {
         $value = CommandValue::ensure($this, $value);
         
-        if ($asArray && is_string($data)) {
-            $data = preg_split('/\r?\n/', $data, -1, PREG_SPLIT_NO_EMPTY);
-        }
-        
-        if ($value->isEmpty()) {
-            // default handling
-            if (!$defaultSet) return;
-            $this->setDataset($data, $defaultSet);
-            $wroteTo = "\$$defaultSet\$";
+        if ($mode == self::MODE_ARRAY) {
+            $data = $value->storeArray($data);
+        } elseif ($mode == self::MODE_CONTENT) {
+            $data = $value->storeContent($data);
         } else {
-            if ($value->isElementsSet()) {
-                $this->setDataset($data, $value->getSetId());
-            } elseif ($value->getFilePath()) {
-                if (is_string($data)) {
-                    $dataString = $data;
-                } else {
-                    if (!count($data) || isset($data[0])) {
-                        // probably an array. store line-by-line
-                        $dataString = implode("\n", $data);
-                    } else {
-                        // everything else store as JSON
-                        $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                    }
-                }
-                if ($value->getFilePath() === 'php://stdout') {
-                    $output->write($dataString, OutputInterface::OUTPUT_RAW);
-                } else {
-                    file_put_contents($value->getFilePath(), $dataString);
-                }
-            }
-            $wroteTo = $value->getShortDescription();
-        }
-        if ($output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            $output->writeln(sprintf('wrote %d %s to %s', is_array($data) ? count($data) : strlen($data), $defaultSet, $wroteTo));
+            $data = $value->storeString($data);
+        }        
+        
+        if ($value->isEmpty() == false && $output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf('wrote %s%s of %s to %s', 
+                    is_array($data) ? count($data) : round(strlen($data)/1024,2), 
+                    is_array($data) ? ' lines' : 'Kb',
+                    $setName, 
+                    $value->getShortDescription()));
         }
     }    
     

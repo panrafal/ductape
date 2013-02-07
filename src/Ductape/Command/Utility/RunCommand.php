@@ -40,7 +40,7 @@ class RunCommand extends AbstractCommand {
         $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->getArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            $output->writeln(sprintf("Running %d commands", count($commands)));
+            $output->writeln(sprintf("Running %d commands:", count($commands)));
         }
 
         $construction = new Ductape();
@@ -59,6 +59,10 @@ class RunCommand extends AbstractCommand {
         } elseif ($returnData->getBool()) {
             $data = $construction->getDataset($returnData->getString());
         }
+        
+        if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            $output->writeln(sprintf("Finished running...", count($commands)));
+        }        
         
         if ($data !== null) {
             $this->writeOutputData($data, $input, $output);

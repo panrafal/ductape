@@ -182,9 +182,8 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         // fold back the code using dependency
         $foldedFiles = array();
         foreach($this->parsedFiles as $file => $info) {
-            $this->foldbackCode($file, $code, $dump, $foldedFiles);
+            $this->foldbackCode($file, $code, $foldedFiles);
         }
-        
         $this->parsedFiles = $foldedFiles;
         
         if ($outputFile) {
@@ -356,6 +355,9 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         } else {
             $node = (array)$node;
         }
+        if (!is_scalar($node[0])) {
+            throw new \Exception("Something is wrong with the node name!");
+        }
         // check uses
         if (isset($this->currentUsemap[$node[0]])) {
             $node[0] = $this->currentUsemap[$node[0]];
@@ -418,7 +420,9 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
 
     public function pStmt_Interface( PHPParser_Node_Stmt_Interface $node ) {
         $this->addClass($node->name);
-        if ($node->extends) $this->addDependentClass($node->extends);
+        foreach ($node->extends as $name) {
+            $this->addDependentClass($name);
+        }
         return parent::pStmt_Interface($node);
     }
 

@@ -49,10 +49,31 @@ class CommandValue {
         
         $this->parse($allowArray);
     }
+    
+    /** @return CommandValue */
+    public static function createRaw( $ductape, $value, $type = self::TYPE_STRING, $identifier = null ) {
+        $cv = new CommandValue($ductape, null, $type);
+        $cv->value = $value;
+        $cv->identifier = ($identifier === null && $type === self::TYPE_STRING && is_string($value)) 
+                ? $value
+                : $identifier
+            ;
+        return $cv;
+    }
+
+    /** @return CommandValue */
+    public static function createSetId( $ductape, $setId ) {
+        return self::createRaw($ductape, "\${$setId}\$", self::TYPE_SET, $setId);
+    }
 
     
     public function isEmpty() {
         return $this->value === null;
+    }
+    
+    /** Returns TRUE if it's empty, assuming it might be a file... */
+    public function isEmptyAsFile() {
+        return $this->isEmpty() || ($this->isArray() == false && $this->getFilePath() == false);
     }
     
     
@@ -105,7 +126,7 @@ class CommandValue {
         return $value;
     }
     
-    
+    /** Returns file contents */
     public function getFileContents() {
         $path = $this->getFilePath();
         if (!$path) return null;
@@ -123,13 +144,83 @@ class CommandValue {
         return file_get_contents($path);
     }
 
+    /** Parses file contents according to filetype
+     * @return CommandValue
+     *  */
+    public function decodeFileContents() {
+        $path = $this->getFilePath();
+        if (!$path) return new CommandValue($this->ductape, null);
+        
+        $extension = strtolower(substr(strrchr($path, '.'), 1));
+        switch($extension) {
+            case 'php':
+                if (strpos($path, ':') === false) {
+                    // only if it's not external!
+                    $data = require $path;
+                    return CommandValue::createRaw( $this->ductape, $this->getFileContents()
+                            , is_scalar($data) ? self::TYPE_STRING : self::TYPE_OBJECT );
+                }
+                break;
+            case 'json':
+                // treat as JSON always
+                return CommandValue::createRaw( $this->ductape, $this->getFileContents(), self::TYPE_JSON );
+                break;
+            case 'txt':
+                // treat as plain text (no json)
+                return CommandValue::createRaw( $this->ductape, $this->getFileContents() );
+                break;
+        }
+
+        // parse the contents normally...
+        return new CommandValue( $this->ductape, $this->getFileContents() );
+    }
+
+    public function storeFileContents($data) {
+        $path = $this->getFilePath();
+        if (!$path) return null;
+
+        file_put_contents($path, (string)$data);
+    }
+    
+    public function encodeFileContents($data) {
+        $path = $this->getFilePath();
+        if (!$path) return null;
+        
+        $extension = strtolower(substr(strrchr($path, '.'), 1));
+        $dataString = '';
+        switch($extension) {
+            case 'php':
+                $dataString = '<?php return ' . var_export($data, true) . ';';
+                break;
+            case 'json':
+                $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                break;
+            default:
+                if (is_string($data)) {
+                    $dataString = $data;
+                } else {
+                    if (!count($data) || isset($data[0])) {
+                        // probably an array. store line-by-line
+                        $dataString = implode("\n", $data);
+                    } else {
+                        // everything else store as JSON
+                        $dataString = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                    }
+                }
+                
+        }        
+        
+        $this->storeFileContents($dataString);
+        return true;
+    }
+    
     
     public function getSetId() {
         if ($this->type == self::TYPE_SET) return $this->identifier;
         return null;
     }
     
-    
+    /* Returns contents as string.  */
     public function getString() {
         if ($this->type === self::TYPE_ARRAY) {
             
@@ -146,9 +237,31 @@ class CommandValue {
             if (is_array($this->value)) return implode("\n", $this->value);
             return (string)$this->value;
         } elseif ($this->type === self::TYPE_FILE) {
-            return $this->getFileContents();
+            return $this->decodeFileContents()->getString();
         } else {
             return implode("\n", $this->getArray()) . "\n";
+        }
+    }
+    
+    /* Returns contents as string.  */
+    public function getContent() {
+        if ($this->type === self::TYPE_ARRAY) {
+            
+            $result = '';
+            foreach ($this->value as $value) {
+                $value = new CommandValue($this->ductape, $value, $this->defaultType, false);
+                $result .= $value->getContent();
+            }
+            return $result;
+            
+        } elseif ($this->type === self::TYPE_STRING || $this->type === self::TYPE_JSON) {
+            return $this->value;
+        } elseif ($this->type === self::TYPE_OBJECT) {
+            return $this->value;
+        } elseif ($this->type === self::TYPE_FILE) {
+            return $this->getFileContents();
+        } else {
+            return $this->getArray();
         }
     }
     
@@ -165,7 +278,7 @@ class CommandValue {
         return $this->value == true;
     }
     
-    
+    /* Returns contents as array or hashmap */
     public function getArray() {
         if ($this->type === self::TYPE_ARRAY) {
             
@@ -182,9 +295,7 @@ class CommandValue {
             
         } elseif ($this->type === self::TYPE_FILE) {
             
-            $value = $this->getFileContents();
-            $value = (new CommandValue($this->ductape, $value));
-            return $value->getArray();
+            return $this->decodeFileContents()->getArray();
 
         } elseif ($this->type === self::TYPE_JSON) {
             
@@ -203,11 +314,63 @@ class CommandValue {
     }
     
     
+    public function storeArray($data) {
+        if ($this->isEmpty()) return;
+        
+        if (is_scalar($data)) {
+            $data = preg_split('/\r?\n/', $data, -1, PREG_SPLIT_NO_EMPTY);
+        }
+        
+        if ($this->type === self::TYPE_SET) {
+            $this->ductape->setDataset($data, $this->getSetId());
+        } elseif ($this->getFilePath()) {
+            $this->encodeFileContents($data);
+        } else {
+            throw new \Exception("Can't store data into " . $this->getShortDescription());
+        }
+        return $data;
+    }
+
+    
+    public function storeString($data) {
+        if ($this->isEmpty()) return;
+        
+        if (is_array($data)) {
+            $data = implode("\n", $data);
+        }
+        
+        if ($this->type === self::TYPE_SET) {
+            $this->ductape->setDataset($data, $this->getSetId());
+        } elseif ($this->getFilePath()) {
+            $this->encodeFileContents($data);
+        } else {
+            throw new \Exception("Can't store data into " . $this->getShortDescription());
+        }
+        return $data;
+    }
+
+    
+    public function storeContent($data) {
+        if ($this->isEmpty()) return;
+        
+        if ($this->type === self::TYPE_SET) {
+            $this->ductape->setDataset($data, $this->getSetId());
+        } elseif ($this->getFilePath()) {
+            $this->storeFileContents($data);
+        } else {
+            throw new \Exception("Can't store data into " . $this->getShortDescription());
+        }
+        return $data;
+    }
+    
+    
     protected function parse($allowArray) {
+        $this->type = $this->defaultType;
+
+        if ($this->value === null) return;
+        
         $value = $this->value;
         if (is_string($this->value)) $this->identifier = $this->value;
-        
-        $this->type = $this->defaultType;
         
         if (is_array($value)) {
             $this->type = isset($value[0]) && $allowArray ? self::TYPE_ARRAY : self::TYPE_OBJECT;
