@@ -107,11 +107,11 @@ class Ductape extends Application {
      * ]
      * ```
      * 
-     * You can do comments by prepending '@' character to key names like this:
+     * You can do comments by prepending '#' character to key names like this:
      * 
      * ```
      * [
-     *      '@commented-out' => 'comment'
+     *      '#commented-out' => 'comment'
      * ]
      * ```
      * 
@@ -133,7 +133,7 @@ class Ductape extends Application {
                 }
             }
             if (!$commandName) throw new Exception("Command name is missing!");
-            if ($commandName[0] == '@') continue;
+            if ($commandName[0] == '#') continue;
 
             if (($result = $this->runCommand($commandName, $params, $output))) {
                 throw new Exception("Last command '$commandName' has failed with result $result");
@@ -199,7 +199,7 @@ class Ductape extends Application {
             'command' => $command->getName()
         );
         foreach($input as $key => $value) {
-            if ($key[0] === '@') continue;
+            if ($key[0] === '#') continue;
             $dashedKey = self::fromCamelCase($key);
             if ($def->hasArgument($key)) {
                 $result[$key] = $value;
@@ -248,11 +248,11 @@ class Ductape extends Application {
         $value = CommandValue::ensure($this, $value);
         
         if ($mode == self::MODE_ARRAY) {
-            $data = $value->getArray();
+            $data = $value->asArray();
         } elseif ($mode == self::MODE_CONTENT) {
             $data = $value->getContent();
         } else {
-            $data = $value->getString();
+            $data = $value->asString();
         }
             
         if ($value->isEmpty() == false && $output && $output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {

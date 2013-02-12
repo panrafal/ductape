@@ -22,9 +22,9 @@
                 }
         }
     },
-    "@comment",
+    "##comment",
     {
-        "@comment": "lastone",
+        "##comment": "lastone",
         "files": {
             "paths": [
                 "ductape.php"
@@ -45,7 +45,7 @@
     },
 
     {
-        "@phar": {
+        "#phar": {
             "phar": "ductape.phar",
             "stubFile": ["ductape.php"]
         }

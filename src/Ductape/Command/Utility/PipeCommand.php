@@ -55,7 +55,7 @@ class PipeCommand extends AbstractCommand {
             }
         }
         
-        $command = $this->getInputValue('command', $input)->getArray();
+        $command = $this->getInputValue('command', $input)->asArray();
         $command = implode(" ", array_map('escapeshellarg', $command));
         
         $process = new Process($command, null, null, $stdin);

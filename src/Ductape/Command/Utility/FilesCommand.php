@@ -53,7 +53,7 @@ class FilesCommand extends AbstractCommand {
 
         $files = $this->readInputData($input, $output, 'files');
 
-        $filter = $this->getInputValue('filter', $input)->getArray();
+        $filter = $this->getInputValue('filter', $input)->asArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
             if ($filter) $output->writeln("Filtering with " . json_encode($filter));
@@ -61,8 +61,8 @@ class FilesCommand extends AbstractCommand {
         
         if ($filter) $filter = new Chequer($filter);
         
-        $includeDirs = $this->getInputValue('include-dirs', $input)->getBool();
-        $globs = $this->getInputValue('paths', $input)->getArray();
+        $includeDirs = $this->getInputValue('include-dirs', $input)->asBool();
+        $globs = $this->getInputValue('paths', $input)->asArray();
         
         foreach($globs as $glob) {
             if (is_file($glob)) {

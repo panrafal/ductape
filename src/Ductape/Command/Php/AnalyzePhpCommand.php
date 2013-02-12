@@ -60,14 +60,14 @@ class AnalyzePhpCommand extends AbstractCommand {
         
         $pa = new ProcessAnalyzer();
         
-        $globals = $this->getInputValue('globals', $input)->getArray();
+        $globals = $this->getInputValue('globals', $input)->asArray();
         
-        $fakeHttp = $this->getInputValue('fake-http', $input)->getArray();
+        $fakeHttp = $this->getInputValue('fake-http', $input)->asArray();
         
         $globals = $input->getOption('globals');
         if ($globals) $env = array_merge($env, json_decode($globals));
 
-        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->getArray();
+        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->asArray();
 //        $classFilter = $this->getInputValue('class-filter', $input)->getArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
@@ -78,7 +78,7 @@ class AnalyzePhpCommand extends AbstractCommand {
         if (!$fakeHttp) $fakeHttp = array(true);
         if (!is_array($globals)) $globals = array();
         
-        $scripts = $this->getInputValue('script', $input)->getArray();
+        $scripts = $this->getInputValue('script', $input)->asArray();
 
         
         foreach($scripts as $script) {

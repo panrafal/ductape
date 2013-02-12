@@ -10,6 +10,8 @@
 
 namespace Ductape\Command;
 
+use Chequer;
+use Ductape\Chequer\DuctapeWrapper;
 use Ductape\Ductape;
 use Exception;
 use Symfony\Component\Console\Command\Command;
@@ -30,7 +32,11 @@ class CommandValue {
     const TYPE_JSON = 'json';
     const TYPE_FILE = 'file';
     const TYPE_SET = 'set';
+    const TYPE_CHEQUER = 'chequer';
 
+    const CH_FILE = '#';
+    const CH_SET = '@';
+    
     /** @return CommandValue */
     public static function ensure($ductape, $value) {
         if ($value instanceof CommandValue) return $value;
@@ -81,7 +87,7 @@ class CommandValue {
     
     /** Returns TRUE if it's empty, assuming it might be a file... */
     public function isEmptyAsFile() {
-        return $this->isEmpty() || ($this->isArray() == false && $this->getFilePath() == false);
+        return $this->isEmpty() || ($this->isArray() == false && $this->asFilePath() == false);
     }
     
     
@@ -95,11 +101,17 @@ class CommandValue {
     }
     
     
+    public function isChequer() {
+        return $this->type === self::TYPE_CHEQUER;
+    }
+    
+    
     public function isArray() {
         return $this->type === self::TYPE_ARRAY
                 || $this->type === self::TYPE_JSON
                 || $this->type === self::TYPE_SET
                 || $this->type === self::TYPE_OBJECT
+                || $this->type === self::TYPE_CHEQUER
                 ;
     }
     
@@ -113,8 +125,23 @@ class CommandValue {
         return $this->value;
     }
 
+    /** Returns value as a Chequer query 
+     * @return Chequer
+     */
+    public function asChequer() {
+        if ($this->type == self::TYPE_CHEQUER) {
+            $value = $this->value;
+        } elseif ($this->isArray()) {
+            $value = $this->asArray();
+        } else {
+            $value = $this->asString();
+        }
+        return Chequer::create($value)
+                ->addTypecast('ductape', new DuctapeWrapper( $this->ductape ))
+                ; 
+    }
     
-    public function getFilePath() {
+    public function asFilePath() {
         $value = $this->value;
         if ($this->type == self::TYPE_FILE) 
             $value = $this->identifier;
@@ -135,8 +162,8 @@ class CommandValue {
     }
     
     /** Returns file contents */
-    public function getFileContents() {
-        $path = $this->getFilePath();
+    public function readFileContents() {
+        $path = $this->asFilePath();
         if (!$path) return null;
 
         if ($path === 'php://stdin') {
@@ -156,7 +183,7 @@ class CommandValue {
      * @return CommandValue
      *  */
     public function decodeFileContents() {
-        $path = $this->getFilePath();
+        $path = $this->asFilePath();
         if (!$path) return new CommandValue($this->ductape, null);
         
         $extension = strtolower(substr(strrchr($path, '.'), 1));
@@ -165,33 +192,33 @@ class CommandValue {
                 if (strpos($path, ':') === false) {
                     // only if it's not external!
                     $data = require $path;
-                    return CommandValue::createRaw( $this->ductape, $this->getFileContents()
+                    return CommandValue::createRaw( $this->ductape, $this->readFileContents()
                             , is_scalar($data) ? self::TYPE_STRING : self::TYPE_OBJECT );
                 }
                 break;
             case 'json':
                 // treat as JSON always
-                return CommandValue::createRaw( $this->ductape, $this->getFileContents(), self::TYPE_JSON );
+                return CommandValue::createRaw( $this->ductape, $this->readFileContents(), self::TYPE_JSON );
                 break;
             case 'txt':
                 // treat as plain text (no json)
-                return CommandValue::createRaw( $this->ductape, $this->getFileContents() );
+                return CommandValue::createRaw( $this->ductape, $this->readFileContents() );
                 break;
         }
 
         // parse the contents normally...
-        return new CommandValue( $this->ductape, $this->getFileContents() );
+        return new CommandValue( $this->ductape, $this->readFileContents() );
     }
 
     public function storeFileContents($data) {
-        $path = $this->getFilePath();
+        $path = $this->asFilePath();
         if (!$path) return null;
 
         file_put_contents($path, (string)$data);
     }
     
     public function encodeFileContents($data) {
-        $path = $this->getFilePath();
+        $path = $this->asFilePath();
         if (!$path) return null;
         
         $extension = strtolower(substr(strrchr($path, '.'), 1));
@@ -223,31 +250,48 @@ class CommandValue {
     }
     
     
-    public function getSetId() {
+    public function asDatasetId() {
         if ($this->type == self::TYPE_SET) return $this->identifier;
         return null;
     }
     
+    /** Returns value as provided type */
+    public function asType($type) {
+        switch($type) {
+            case self::TYPE_STRING:
+                return $this->asString();
+            case self::TYPE_ARRAY:
+                return $this->asArray();
+            case 'content':
+                return $this->getContent();
+            case 'bool':
+                return $this->asBool();
+        }
+        return $this->asString();
+    }
+    
     /* Returns contents as string.  */
-    public function getString() {
+    public function asString() {
         if ($this->type === self::TYPE_ARRAY) {
             
             $result = '';
             foreach ($this->value as $value) {
                 $value = new CommandValue($this->ductape, $value, $this->defaultType, false);
-                $result .= $value->getString();
+                $result .= $value->asString();
             }
             return $result;
             
         } elseif ($this->type === self::TYPE_STRING || $this->type === self::TYPE_JSON) {
             return $this->value;
+        } elseif ($this->type === self::TYPE_CHEQUER) {
+            return $this->asChequer()->evaluate(self::TYPE_STRING);
         } elseif ($this->type === self::TYPE_OBJECT) {
             if (is_array($this->value)) return implode("\n", $this->value);
             return (string)$this->value;
         } elseif ($this->type === self::TYPE_FILE) {
-            return $this->decodeFileContents()->getString();
+            return $this->decodeFileContents()->asString();
         } else {
-            return implode("\n", $this->getArray()) . "\n";
+            return implode("\n", $this->asArray()) . "\n";
         }
     }
     
@@ -264,17 +308,22 @@ class CommandValue {
             
         } elseif ($this->type === self::TYPE_STRING || $this->type === self::TYPE_JSON) {
             return $this->value;
+        } elseif ($this->type === self::TYPE_CHEQUER) {
+            return $this->asChequer()->evaluate('content');
         } elseif ($this->type === self::TYPE_OBJECT) {
             return $this->value;
         } elseif ($this->type === self::TYPE_FILE) {
-            return $this->getFileContents();
+            return $this->readFileContents();
         } else {
-            return $this->getArray();
+            return $this->asArray();
         }
     }
     
     
-    public function getBool() {
+    public function asBool() {
+        if ($this->type === self::TYPE_CHEQUER) {
+            return $this->asChequer()->evaluate('bool') == true;
+        }
         if (is_string($this->value)) {
             if (strcasecmp($this->value, 'false') === 0) return false;
             if (strcasecmp($this->value, 'not') === 0) return false;
@@ -287,23 +336,26 @@ class CommandValue {
     }
     
     /* Returns contents as array or hashmap */
-    public function getArray() {
+    public function asArray() {
         if ($this->type === self::TYPE_ARRAY) {
             
             $result = array();
             foreach ($this->value as $value) {
                 $value = new CommandValue($this->ductape, $value, $this->defaultType);
-                $result = array_merge($result, $value->getArray());
+                $result = array_merge($result, $value->asArray());
             }
             return $result;
             
         } elseif ($this->type === self::TYPE_SET) {
             
-            return $this->ductape->getDataset($this->getSetId());
+            return $this->ductape->getDataset($this->asDatasetId());
+        } elseif ($this->type === self::TYPE_CHEQUER) {
+            
+            return $this->asChequer()->evaluate('array');            
             
         } elseif ($this->type === self::TYPE_FILE) {
             
-            return $this->decodeFileContents()->getArray();
+            return $this->decodeFileContents()->asArray();
 
         } elseif ($this->type === self::TYPE_JSON) {
             
@@ -330,8 +382,8 @@ class CommandValue {
         }
         
         if ($this->type === self::TYPE_SET) {
-            $this->ductape->setDataset($data, $this->getSetId());
-        } elseif ($this->getFilePath()) {
+            $this->ductape->setDataset($data, $this->asDatasetId());
+        } elseif ($this->asFilePath()) {
             $this->encodeFileContents($data);
         } else {
             throw new \Exception("Can't store data into " . $this->getShortDescription());
@@ -348,8 +400,8 @@ class CommandValue {
         }
         
         if ($this->type === self::TYPE_SET) {
-            $this->ductape->setDataset($data, $this->getSetId());
-        } elseif ($this->getFilePath()) {
+            $this->ductape->setDataset($data, $this->asDatasetId());
+        } elseif ($this->asFilePath()) {
             $this->encodeFileContents($data);
         } else {
             throw new \Exception("Can't store data into " . $this->getShortDescription());
@@ -362,8 +414,8 @@ class CommandValue {
         if ($this->isEmpty()) return;
         
         if ($this->type === self::TYPE_SET) {
-            $this->ductape->setDataset($data, $this->getSetId());
-        } elseif ($this->getFilePath()) {
+            $this->ductape->setDataset($data, $this->asDatasetId());
+        } elseif ($this->asFilePath()) {
             $this->storeFileContents($data);
         } else {
             throw new \Exception("Can't store data into " . $this->getShortDescription());
@@ -392,15 +444,26 @@ class CommandValue {
         $first = $value[0];
         $last = substr($value, -1);
         
-        if ($first === '#' && $last === '#' && strpos($value, "\n") === false) {
+        if ($first === CommandValue::CH_FILE && $last === CommandValue::CH_FILE && strpos($value, "\n") === false) {
             
             $this->type = self::TYPE_FILE;
             $this->identifier = substr($value, 1, -1);
             
-        } elseif ($first === '$' && $last === '$' && strpos($value, "\n") === false) {
+        } elseif ($first === CommandValue::CH_SET && $last === CommandValue::CH_SET && strpos($value, "\n") === false) {
             
             $this->type = self::TYPE_SET;
             $this->identifier = substr($value, 1, -1);
+            
+        } elseif ($first === '$' && $value[1] === ' ') {
+            
+            $this->type = self::TYPE_CHEQUER;
+            $this->identifier = substr($value, 1, -1);
+
+        } elseif ($first === '\\' && $value[1] === '$') {
+            
+            // chequer escaping
+            $this->type = self::TYPE_STRING;
+            $this->value = substr($value, 1);
             
         } elseif (($first === '{' && $last === '}') || ($first === '[' && $last === ']')) {
             

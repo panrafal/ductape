@@ -68,8 +68,8 @@ class CombinePhpCommand extends AbstractCommand {
 
         $files = $this->readInputData($input, $output, 'files');
         
-        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->getArray();
-        $includesFilter = $this->getInputValue('includes-filter', $input, CommandValue::TYPE_JSON)->getArray();
+        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->asArray();
+        $includesFilter = $this->getInputValue('includes-filter', $input, CommandValue::TYPE_JSON)->asArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
             if ($filesFilter !== null) $output->writeln("filtering files with " . json_encode($filesFilter));
@@ -79,9 +79,9 @@ class CombinePhpCommand extends AbstractCommand {
         if ($filesFilter !== null) $files = array_filter($files, new Chequer($filesFilter));
 
         $combiner = new \Ductape\Parser\SourceCombiner($files);
-        $combiner->setComments($this->getInputValue('comments', $input)->getBool());
-        $combiner->setAllowMissingIncludes($this->getInputValue('allow-missing-includes', $input)->getBool());
-        $combiner->setBaseDir($this->getInputValue('base-dir', $input)->getString());
+        $combiner->setComments($this->getInputValue('comments', $input)->asBool());
+        $combiner->setAllowMissingIncludes($this->getInputValue('allow-missing-includes', $input)->asBool());
+        $combiner->setBaseDir($this->getInputValue('base-dir', $input)->asString());
         if ($includesFilter !== null) $combiner->setIncludesFilter($includesFilter);
 
         $code = $combiner->combine();

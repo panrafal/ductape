@@ -45,7 +45,7 @@ class RunCommand extends AbstractCommand {
 
         $data = $this->getApplication()->getDataset(Ductape::SET_ALL);
 
-        $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->getArray();
+        $commands = $this->getInputValue('commands', $input, CommandValue::TYPE_FILE)->asArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
             $output->writeln(sprintf("Running %d commands:", count($commands)));
@@ -64,8 +64,8 @@ class RunCommand extends AbstractCommand {
         $returnData = $this->getInputValue('return-data', $input);
         if ($returnData->isEmpty()) {
             $data = $construction->getDataset($construction->lastDataSet);
-        } elseif ($returnData->getBool()) {
-            $data = $construction->getDataset($returnData->getString());
+        } elseif ($returnData->asBool()) {
+            $data = $construction->getDataset($returnData->asString());
         }
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {

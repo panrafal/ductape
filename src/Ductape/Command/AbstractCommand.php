@@ -73,9 +73,9 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         $sets = array_keys($sets);
         if ($sets) {
             $fileCompare = new CommandValue($this, $file);
-            $fileCompare = $fileCompare->getFilePath();
+            $fileCompare = $fileCompare->asFilePath();
             foreach($sets as $set) {
-                if ($this->getInputValue($set . '-' . $direction, $input)->getFilePath() == $fileCompare) {
+                if ($this->getInputValue($set . '-' . $direction, $input)->asFilePath() == $fileCompare) {
                     // it is used already
                     return;
                 }
@@ -96,7 +96,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
                 && $this->getApplication()->lastDataSet != Ductape::SET_DATA
                 && $this->getInputValue($inSets[0] . '-in', $input)->isEmpty()
         ) {
-            $this->setInputValue($inSets[0] . '-in', '$' . $this->getApplication()->lastDataSet . '$', $input);            
+            $this->setInputValue($inSets[0] . '-in', CommandValue::CH_SET . $this->getApplication()->lastDataSet . CommandValue::CH_SET, $input);            
         }
         
         if ($outSets
@@ -104,7 +104,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
                 && $this->getApplication()->lastDataSet != Ductape::SET_DATA
                 && $this->getInputValue($outSets[0] . '-out', $input)->isEmpty()
         ) {
-            $this->setInputValue($outSets[0] . '-out', '$' . $this->getApplication()->lastDataSet . '$', $input);
+            $this->setInputValue($outSets[0] . '-out', CommandValue::CH_SET . $this->getApplication()->lastDataSet . CommandValue::CH_SET, $input);
         }
         
         if ($outSets && $outSets[0] != Ductape::SET_DATA) {

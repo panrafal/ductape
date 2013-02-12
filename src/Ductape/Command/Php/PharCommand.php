@@ -54,11 +54,11 @@ class PharCommand extends AbstractCommand {
         
         $files = $this->readInputData($input, $output, 'files');
         
-        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->getArray();
-        $pharFile = $this->getInputValue('phar', $input)->getString();
+        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->asArray();
+        $pharFile = $this->getInputValue('phar', $input)->asString();
         
-        $stub = $this->getInputValue('stub', $input)->getString();
-        $stubFile = $this->getInputValue('stub-file', $input)->getString();
+        $stub = $this->getInputValue('stub', $input)->asString();
+        $stubFile = $this->getInputValue('stub-file', $input)->asString();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
             if ($filesFilter !== null) $output->writeln("filtering files with " . json_encode($filesFilter));
@@ -75,7 +75,7 @@ class PharCommand extends AbstractCommand {
         
         $phar->startBuffering();
         
-        $baseDir = $this->getInputValue('base-dir', $input)->getString();
+        $baseDir = $this->getInputValue('base-dir', $input)->asString();
         if (!$baseDir) $baseDir = dirname($pharFile);
         if (is_dir($baseDir)) {
             $baseDir = realpath($baseDir);
