@@ -32,7 +32,7 @@ class FilesCommand extends AbstractCommand {
                 ->setName('files')
                 ->setDescription('Finds files. If there are any files in the input, they are preserved.')
                 ->addArgument('paths', InputArgument::IS_ARRAY | InputArgument::OPTIONAL, 'Directory to look into, specific file, or glob pattern')
-                ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter in Chequer Query Language.', false)
+                ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter in Chequer Query Language.')
                 ->addOption('include-dirs', null, InputOption::VALUE_OPTIONAL, 'Include directories in the output.', false)
 //                ->addOption('glob', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_OPTIONAL, '', false)
 //                ->addOption('http', null, InputOption::VALUE_OPTIONAL, 'Full URL to set in the environment, faking a HTTP REQUEST', false)
@@ -53,13 +53,11 @@ class FilesCommand extends AbstractCommand {
 
         $files = $this->readInputData($input, $output, 'files');
 
-        $filter = $this->getInputValue('filter', $input)->asArray();
+        $filter = $this->getInputValue('filter', $input)->asChequer();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            if ($filter) $output->writeln("Filtering with " . json_encode($filter));
+            if ($filter) $output->writeln("Filtering with " . $filter);
         }
-        
-        if ($filter) $filter = new Chequer($filter);
         
         $includeDirs = $this->getInputValue('include-dirs', $input)->asBool();
         $globs = $this->getInputValue('paths', $input)->asArray();

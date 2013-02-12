@@ -46,17 +46,16 @@ class FilterCommand extends AbstractCommand {
 
         $data = $this->readInputData($input, $output);
 
-        $filter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON);
-        $filter = $filter->isEmpty() ? null : $filter->asArray();
+        $filter = $this->getInputValue('filter', $input)->asChequer();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            if ($filter !== null) $output->writeln("Filtering with " . json_encode($filter));
+            if ($filter) $output->writeln("Filtering with " . $filter);
         }
         
         if ($this->getInputValue('clear', $input)->asBool()) {
             $data = array();
         } elseif ($filter !== null) {
-            $data = array_filter($data, new Chequer($filter));
+            $data = array_filter($data, $filter);
         }
         
         $this->writeOutputData($data, $input, $output);

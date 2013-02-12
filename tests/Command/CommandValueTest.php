@@ -80,6 +80,9 @@ class CommandValueTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(CommandValue::TYPE_JSON, $value->getType());
         $this->assertEquals(array("foo", "bar"), $value->asArray());
         
+        $value = new CommandValue($this->command, '$ (foo, bar, baz)');
+        $this->assertEquals(array("foo", "bar", "baz"), $value->asArray());
+        
         $value = new CommandValue($this->command, ['["foo", "bar"]', "baz"], CommandValue::TYPE_STRING, true);
         $this->assertEquals(array("foo", "bar", "baz"), $value->asArray());
         

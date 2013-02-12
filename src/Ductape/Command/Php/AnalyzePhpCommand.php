@@ -67,11 +67,11 @@ class AnalyzePhpCommand extends AbstractCommand {
         $globals = $input->getOption('globals');
         if ($globals) $env = array_merge($env, json_decode($globals));
 
-        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->asArray();
+        $filesFilter = $this->getInputValue('filter', $input)->asChequer();
 //        $classFilter = $this->getInputValue('class-filter', $input)->getArray();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            if ($filesFilter !== null) $output->writeln("filtering files with " . json_encode($filesFilter));
+            if ($filesFilter !== null) $output->writeln("filtering files with " . $filesFilter);
 //            if ($classFilter) $output->writeln("filtering classes with " . json_encode($classFilter));
         }
         
@@ -103,7 +103,7 @@ class AnalyzePhpCommand extends AbstractCommand {
                     exit(1);
                 }
 
-                if ($filesFilter !== null) $result['files'] = array_filter($result['files'], new Chequer($filesFilter));
+                if ($filesFilter) $result['files'] = array_filter($result['files'], $filesFilter);
 
                 $files = array_unique(array_merge($files, $result['files']));
                 $classesOut = array_unique(array_merge($classesOut, array_keys($result['classes'])));

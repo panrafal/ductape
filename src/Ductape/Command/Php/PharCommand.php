@@ -54,17 +54,17 @@ class PharCommand extends AbstractCommand {
         
         $files = $this->readInputData($input, $output, 'files');
         
-        $filesFilter = $this->getInputValue('filter', $input, CommandValue::TYPE_JSON)->asArray();
+        $filesFilter = $this->getInputValue('filter', $input)->asChequer();
         $pharFile = $this->getInputValue('phar', $input)->asString();
         
         $stub = $this->getInputValue('stub', $input)->asString();
         $stubFile = $this->getInputValue('stub-file', $input)->asString();
         
         if ($output->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
-            if ($filesFilter !== null) $output->writeln("filtering files with " . json_encode($filesFilter));
+            if ($filesFilter) $output->writeln("filtering files with " . $filesFilter);
         }
         
-        if ($filesFilter !== null) $files = array_filter($files, new Chequer($filesFilter));
+        if ($filesFilter) $files = array_filter($files, $filesFilter);
 
         $files = array_merge($files, (array)$stubFile);
         

@@ -77,7 +77,7 @@ class CommandValue {
 
     /** @return CommandValue */
     public static function createSetId( $ductape, $setId ) {
-        return self::createRaw($ductape, "\${$setId}\$", self::TYPE_SET, $setId);
+        return self::createRaw($ductape, self::CH_SET . $setId . self::CH_SET, self::TYPE_SET, $setId);
     }
 
     
@@ -129,10 +129,13 @@ class CommandValue {
      * @return Chequer
      */
     public function asChequer() {
+        if ($this->isEmpty()) return null;
         if ($this->type == self::TYPE_CHEQUER) {
             $value = $this->value;
         } elseif ($this->isArray()) {
             $value = $this->asArray();
+        } elseif (preg_match('/^true|false|null|[-\d.]+$/i', $this->value)) {
+            $value = json_decode($this->value);
         } else {
             $value = $this->asString();
         }
