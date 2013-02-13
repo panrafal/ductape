@@ -65,7 +65,7 @@ class FilterCommand extends AbstractCommand {
         }
         
         if (($chequer = $this->getInputValue('filter', $input)->asChequer())) {
-            $data = array_filter($data, $chequer);
+            $data = array_merge( array_filter($data, $chequer) );
             if ($verbose) $output->writeln(count($data) . " after filtering with " . $chequer);
         }
         

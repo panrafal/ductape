@@ -69,7 +69,7 @@ class FilesCommand extends AbstractCommand {
             }
             $iterator = is_dir($glob) 
                     ? new RecursiveIteratorIterator(new RecursiveDirectoryIterator($glob, FilesystemIterator::SKIP_DOTS)) 
-                    : new GlobIterator($glob, FilesystemIterator::SKIP_DOTS);
+                    : new GlobIterator('./'.$glob, FilesystemIterator::SKIP_DOTS);
             foreach($iterator as $path => $file) {
                 /* @var $file SplFileInfo */
                 if (!$includeDirs && $file->isDir()) continue;

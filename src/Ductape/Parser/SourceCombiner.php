@@ -62,6 +62,7 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
 
     protected $comments = true;
     protected $combineFiles = array();
+    protected $requiredFiles = null;
     protected $includesFilter = null;
     protected $allowMissingIncludes = true;
     protected $baseDir = null;
@@ -130,6 +131,22 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         return $this;
     }
 
+    
+    /**
+     * Sets the list of required files. If every required file and it's dependencies are combined,
+     * the rest will be discarded.
+     * 
+     * @return self
+     */
+    public function setRequiredFiles($requiredFiles) {
+        $this->requiredFiles = array();
+        foreach($requiredFiles as $file) {
+            if (!is_file($file)) throw new Exception("File '$file' does not exist!");
+            $this->requiredFiles[realpath($file)] = true;
+        }
+        return $this;
+    }
+    
 
     /**
      * Base dir to use for relative paths in __DIR__ and __FILE__ substitutions.
@@ -259,6 +276,8 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
 
     protected function foldbackCode($file, &$code, &$foldedFiles) {
         if (isset($foldedFiles[$file])) return;
+        // all required files are in. we can wrap up!
+        if ($this->requiredFiles !== null && $this->requiredFiles === array()) return; 
         $foldedFiles[$file] = $this->parsedFiles[$file];
         
         // fold parents first!
@@ -267,6 +286,7 @@ class SourceCombiner extends PHPParser_PrettyPrinter_Zend {
         }
         
         $code .= $this->parsedFiles[$file]['code'] . "\n";
+        if ($this->requiredFiles !== null) unset($this->requiredFiles[$file]);
     }
     
 

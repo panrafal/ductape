@@ -10,9 +10,7 @@
 
 namespace Ductape\Command\Php;
 
-use Chequer;
 use Ductape\Command\AbstractCommand;
-use Ductape\Command\CommandValue;
 use Ductape\Ductape;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -24,11 +22,17 @@ class CombinePhpCommand extends AbstractCommand {
         parent::configure();
 
         $this->setName('combine-php')
-                ->setDescription("Combines multiple PHP scripts into one.")
+                ->setDescription("Combines multiple PHP scripts into one. During the process it resolves
+                    dependencies between files using static analysis. It can be used to combine PHPs, 
+                    analyze their dependencies, and create lists of actually used files.")
+                ->setHelp("Input files are first analyzed for their dependencies, than sorted in correct
+order and combined together.
+")
                 ->addOption('comments', null, InputOption::VALUE_OPTIONAL, 'Option to leave or strip comments from the source.', true)
                 ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter input files using Chequer Query Language.')
                 ->addOption('includes-filter', null, InputOption::VALUE_OPTIONAL, 'Filter include\'s parsing using Chequer Query Language.')
                 ->addOption('allow-missing-includes', null, InputOption::VALUE_OPTIONAL, 'Allow missing includes.', true)
+//                ->addOption('required', null, InputOption::VALUE_OPTIONAL, 'Allow missing includes.', true)
                 ->addOption('base-dir', null, InputOption::VALUE_OPTIONAL, 
                         "Base directory used when resolving paths of __DIR__ and __FILE__ constants.\n
                             It is required if the directory in which you will store the output will be different, 
@@ -38,7 +42,12 @@ class CombinePhpCommand extends AbstractCommand {
     }
 
     public function getInputSets() {
-        return array(Ductape::SET_FILES => array());
+        return array(
+            Ductape::SET_FILES => array(),
+            'required' => array(
+                'description' => 'Files required in the package (and their dependencies). The rest will be ignored, but used for static analysis.'
+            ),
+);
     }
     
     public function getOutputSets() {
@@ -67,6 +76,7 @@ class CombinePhpCommand extends AbstractCommand {
     protected function execute( InputInterface $input, OutputInterface $output ) {
 
         $files = $this->readInputData($input, $output, 'files');
+        $requiredFiles = $this->readInputData($input, $output, 'required');
         
         $filesFilter = $this->getInputValue('filter', $input)->asChequer();
         $includesFilter = $this->getInputValue('includes-filter', $input)->asChequer();
@@ -83,6 +93,7 @@ class CombinePhpCommand extends AbstractCommand {
         $combiner->setAllowMissingIncludes($this->getInputValue('allow-missing-includes', $input)->asBool());
         $combiner->setBaseDir($this->getInputValue('base-dir', $input)->asString());
         if ($includesFilter) $combiner->setIncludesFilter($includesFilter);
+        if ($requiredFiles) $combiner->setRequiredFiles($requiredFiles);
 
         $code = $combiner->combine();
         

@@ -36,6 +36,7 @@ class PharCommand extends AbstractCommand {
                 ->addOption('base-dir', null, InputOption::VALUE_OPTIONAL, 
                         "Base directory used when resolving paths.")
                 ->addOption('filter', null, InputOption::VALUE_OPTIONAL, 'Filter files using Chequer Query Language.')
+                ->addOption('update', 'u', null, 'Update the phar file. Otherwise it will be overwritten')
                 ;
         
     }
@@ -70,7 +71,7 @@ class PharCommand extends AbstractCommand {
         
         $pharName = basename($pharFile);
         
-        unlink($pharFile);
+        if (file_exists($pharFile) && $this->getInputValue('update', $input)->asBool() == false) unlink($pharFile);
         $phar = new Phar($pharFile);
         
         $phar->startBuffering();

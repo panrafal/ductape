@@ -125,7 +125,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
 
         /* setup stdout. always-on stdin causes trouble on windows, so for now it will be off */
         if ($input instanceof ArgvInput) {
-            //$this->setStreamRedirection($this->getInputSets(), 'in', '#stdin#', $input);
+            $this->setStreamRedirection($this->getInputSets(), 'in', '#stdin#', $input);
             $this->setStreamRedirection($this->getOutputSets(), 'out', '#stdout#', $input);
         }
         
