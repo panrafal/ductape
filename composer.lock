@@ -1,0 +1,185 @@
+{
+    "hash": "ba1e5f4204646e841b38e40c900b3c5b",
+    "packages": [
+        {
+            "name": "nikic/php-parser",
+            "version": "v0.9.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nikic/PHP-Parser",
+                "reference": "v0.9.3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://github.com/nikic/PHP-Parser/archive/v0.9.3.zip",
+                "reference": "v0.9.3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.2"
+            },
+            "time": "2012-11-22 18:54:05",
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "PHPParser": "lib/"
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Nikita Popov"
+                }
+            ],
+            "description": "A PHP parser written in PHP",
+            "keywords": [
+                "parser",
+                "php"
+            ]
+        },
+        {
+            "name": "stamina/chequer-php",
+            "version": "dev-develop",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/panrafal/chequer-php",
+                "reference": "be4af5e840df9b239dbe99d5a0cdb8453278195a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/panrafal/chequer-php/zipball/be4af5e840df9b239dbe99d5a0cdb8453278195a",
+                "reference": "be4af5e840df9b239dbe99d5a0cdb8453278195a",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3"
+            },
+            "time": "2013-02-12 23:48:41",
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Chequer": "",
+                    "DynamicObject": ""
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rafal Lindemann",
+                    "email": "rl@stamina.pl"
+                }
+            ],
+            "description": "Fast & simple scalar/object/array checking/validation class",
+            "homepage": "http://github.com/panrafal/chequer-php",
+            "keywords": [
+                "array",
+                "callable",
+                "callback",
+                "check",
+                "object",
+                "php",
+                "scalar",
+                "validate",
+                "validation"
+            ]
+        },
+        {
+            "name": "symfony/console",
+            "version": "v2.1.7",
+            "target-dir": "Symfony/Component/Console",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/Console",
+                "reference": "v2.1.7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://github.com/symfony/Console/archive/v2.1.7.zip",
+                "reference": "v2.1.7",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "time": "2013-01-17 15:20:05",
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\Console": ""
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony Console Component",
+            "homepage": "http://symfony.com"
+        },
+        {
+            "name": "symfony/process",
+            "version": "v2.1.7",
+            "target-dir": "Symfony/Component/Process",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/Process",
+                "reference": "v2.1.7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://github.com/symfony/Process/archive/v2.1.7.zip",
+                "reference": "v2.1.7",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "time": "2013-01-16 09:27:54",
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\Process": ""
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony Process Component",
+            "homepage": "http://symfony.com"
+        }
+    ],
+    "packages-dev": null,
+    "aliases": [
+
+    ],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "stamina/chequer-php": 20
+    }
+}

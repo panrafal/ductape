@@ -45,7 +45,6 @@ class Ductape extends Application {
     
     public $lastDataSet = self::SET_DATA;
 
-    
     public function __construct() {
         parent::__construct('DUCTAPE', '0.1');
 
