@@ -1,0 +1,54 @@
+[
+    "## First the required set of files. They HAVE to be in the package",
+    {
+        "files": {
+            "paths": [
+                "ductape.php",
+                "src/"
+            ],
+            "files-out": "@required@"
+        }
+    },
+    "## Add more files for static analysis. They MAY be in the package. Combine them with required...",
+    {
+        "files": {
+            "files-in": "@required@",
+            "paths": [
+                "vendor/autoload.php",
+                "vendor/composer/",
+                "vendor/stamina/chequer-php/Chequer.php",
+                "vendor/nikic/php-parser/lib/PhpParser"
+                ]
+        }
+    },
+    {
+        "files": {
+            "paths": [
+                "vendor/symfony"
+                ],
+            "filter": {
+                "$regex" : "/\\.php/",
+                "$not" : {"$regex" : "/\\bTests\\b/i"}
+                }
+        }
+    },
+    {
+        "combinePhp": {
+            "required-in": false,
+            "contentOut": "results/ductape-combined.php",
+            "comments": false,
+            "classmapOut": "results/combined-classmap.json",
+            "classesOut": "results/combined-classes.json",
+            "filesOut": "results/combined-files.json",
+            "classesUnknownOut": "results/combined-classes-unknown.json",
+            "filesInfoOut": "results/combined-files-info.json"
+        }
+    },
+    {
+        "#phar": {
+            "phar": "ductape.phar",
+            "stubFile": ["ductape.php"]
+        }
+    }
+
+]
