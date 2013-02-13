@@ -157,7 +157,7 @@ abstract class AbstractCommand extends Command implements CommandInterface {
         } else {
             throw new Exception("Value {$name} is not defined!");
         }
-        return new CommandValue($this, $value, $defaultType, $allowArray);
+        return new CommandValue($this, $value, $defaultType, $allowArray, $input);
     }
     
     

@@ -20,6 +20,10 @@ class CommandValue {
 
     /** @var Ductape */
     protected $ductape;
+    /** @var Command */
+    protected $command;
+    /** @var \Symfony\Component\Console\Input\InputInterface */
+    protected $input;
     protected $value;
     protected $identifier;
     protected $type;
@@ -49,17 +53,17 @@ class CommandValue {
      * @param $defaultType - Default type to assume for strings - string, file, set or json
      * @param $allowArray - TRUE to enable recursive parsing of arrays (not hashmaps!)
      */
-    function __construct( $ductape, $value, $defaultType = self::TYPE_STRING, $allowArray = false ) {
-        if ($ductape instanceof Command) $ductape = $ductape->getApplication();
-        
+    function __construct( $ductape, $value, $defaultType = self::TYPE_STRING, $allowArray = false, $input = null ) {
         if ($allowArray && is_array($value)) {
             if (!count($value)) $value = null;
             elseif (count($value) == 1) $value = $value[0];
         }
         
         $this->defaultType = $defaultType;
-        $this->ductape = $ductape;
+        $this->command = $ductape instanceof Command ? $ductape : null;
+        $this->ductape = $ductape instanceof Command ? $ductape->getApplication() : $ductape;
         $this->value = $value;
+        $this->input = $input;
         
         $this->parse($allowArray);
     }
@@ -140,7 +144,7 @@ class CommandValue {
             $value = $this->asString();
         }
         return Chequer::create($value)
-                ->addTypecast('ductape', new DuctapeWrapper( $this->ductape ))
+                ->addTypecast('ductape', new DuctapeWrapper( $this->ductape, $this->command, $this->input ))
                 ; 
     }
     
